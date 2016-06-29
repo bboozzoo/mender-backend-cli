@@ -45,12 +45,24 @@
              return base + "/" + devid;
          };
 
-         var baseurl = "http://localhost:8082/api/0.1.0/devices";
          var app = angular.module('myApp', []);
          app.controller('myCtrl', function($scope, $http) {
 
+             $scope.baseURL = "";
+
+             getBaseURL = function() {
+                 $http.get("config")
+                      .then(function(response) {
+                          if (response.status == 200) {
+                              $scope.baseURL = response.data.trim();
+                              console.log("base URL set to " + $scope.baseURL);
+
+                              updateDevices();
+                          }
+                      });
+             }
              updateDevices = function() {
-                 $http.get(baseurl)
+                 $http.get($scope.baseURL)
                       .then(function(response) {
                           $scope.devices = response.data;
                       });
@@ -58,7 +70,7 @@
 
              updateDevStatus = function(devid) {
                  console.log("get status of device " + devid)
-                 $http.get(getDevUrl(baseurl, devid) + "/status")
+                 $http.get(getDevUrl($scope.baseURL, devid) + "/status")
                         .then(function(response){
                             if (response.status == 200) {
 
@@ -76,7 +88,7 @@
              }
 
              devAction = function(devid, status) {
-                 devurl = getDevUrl(baseurl, devid) + "/status";
+                 devurl = getDevUrl($scope.baseURL, devid) + "/status";
                  console.log("device URL: " + devurl + " action " + status);
                  $http.put(devurl, {"status": status})
                       .then(function(response) {
@@ -101,7 +113,8 @@
                  devAction(devid, "rejected");
              };
 
-             updateDevices();
+             getBaseURL();
+
          });
         </script>
 
