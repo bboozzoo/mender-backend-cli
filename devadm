@@ -14,6 +14,7 @@ def parse_arguments():
                         )
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
+    parser.set_defaults(command='')
     sub = parser.add_subparsers(help='Commands')
 
     paccept = sub.add_parser('accept', help='Accept device')
