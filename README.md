@@ -1,17 +1,16 @@
-## Running
+## What is it?
 
-Start a simple HTTP server inside this directory, for instance:
+A collection of cli tools for working with Mender backend.
 
-```
-python3 -m http.server 9999
-```
+Dependencies:
+- Python 3
+- requests
 
-Direct your browser to http://localhost:9999
+## Tools
 
-## Configuration
+There's a separate tool for working with each service:
 
-Write API URL to the `config` file in this repo. For example:
+- `deps` - deployments & images
+- `devadm` - device admission
 
-```
-# echo 'http://localhost:8082/api/integrations/0.1/' > config
-```
+Each tool supports a number of commands, use `--help` for details.
