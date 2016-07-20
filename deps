@@ -38,6 +38,9 @@ def parse_arguments():
     pishow = pisub.add_parser('show', help='Show image')
     pishow.set_defaults(imcommand='show')
     pishow.add_argument('id', help='Image ID')
+    # images list
+    pishow = pisub.add_parser('list', help='List images')
+    pishow.set_defaults(imcommand='list')
     # image add
     piadd = pisub.add_parser('add', help='Add image')
     piadd.set_defaults(imcommand='add')
@@ -178,9 +181,16 @@ def do_images_download(opts):
     url = opts.service + '/images/{}/download'.format(opts.id)
     do_simple_get(url, verify=opts.verify)
 
+
 def do_images_show(opts):
     logging.debug('get image %s download', opts.id)
     url = opts.service + '/images/{}'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def do_images_list(opts):
+    logging.debug('list images')
+    url = opts.service + '/images'
     do_simple_get(url, verify=opts.verify)
 
 
@@ -196,6 +206,7 @@ def do_images(opts):
     logging.debug('images opts: %r', opts)
     cmds = {
         'find': None,
+        'list': do_images_list,
         'add': do_images_add,
         'show': do_images_show,
         'remove': None,
