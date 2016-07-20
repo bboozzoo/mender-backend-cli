@@ -46,11 +46,11 @@ def dump_device(data, showkey=True):
         print(data['key'])
 
 def show_device(opts):
-    url = opts.service + '/{}/status'.format(opts.device)
+    url = opts.service + '/{}'.format(opts.device)
     r = requests.get(url, verify=opts.verify)
     logging.debug("%r", r.status_code)
 
-    dump_device(r.json()[0])
+    dump_device(r.json())
 
 def list_devices(opts):
     r = requests.get(opts.service, verify=opts.verify)
