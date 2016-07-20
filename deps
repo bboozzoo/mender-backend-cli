@@ -20,7 +20,7 @@ def parse_arguments():
 
     # images
     pimages = sub.add_parser('images', help='Commands for images')
-    pimages.set_defaults(command='images')
+    pimages.set_defaults(command='images', imcommand='')
     pisub = pimages.add_subparsers(help='Commands for images')
     # image upload
     piup = pisub.add_parser('upload', help='Upload image')
@@ -49,7 +49,7 @@ def parse_arguments():
 
     # deployments
     pdeps = sub.add_parser('deployments', help='Commands for deployments')
-    pdeps.set_defaults(command='deployments')
+    pdeps.set_defaults(command='deployments', depcommand='')
 
     pdsub = pdeps.add_subparsers(help='Commands for deployment')
 
