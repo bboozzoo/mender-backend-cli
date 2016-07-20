@@ -21,6 +21,31 @@ def parse_arguments():
     # images
     pimages = sub.add_parser('images', help='Commands for images')
     pimages.set_defaults(command='images')
+    pisub = pimages.add_subparsers(help='Commands for images')
+    # image upload
+    piup = pisub.add_parser('upload', help='Upload image')
+    piup.set_defaults(imcommand='upload')
+    piup.add_argument('id', help='Image ID')
+    # image download
+    pidown = pisub.add_parser('download', help='Download image')
+    pidown.set_defaults(imcommand='download')
+    pidown.add_argument('id', help='Image ID')
+    # image remove
+    pidel = pisub.add_parser('remove', help='Remove image')
+    pidel.set_defaults(imcommand='remove')
+    pidel.add_argument('id', help='Image ID')
+    # image show
+    pishow = pisub.add_parser('show', help='Show image')
+    pishow.set_defaults(imcommand='show')
+    pishow.add_argument('id', help='Image ID')
+    # image add
+    piadd = pisub.add_parser('add', help='Add image')
+    piadd.set_defaults(imcommand='add')
+    piadd.add_argument('-n', '--name', help='Image name', required=True)
+    piadd.add_argument('-e', '--description', help='Image description', required=True)
+    piadd.add_argument('-t', '--device-type', help='Device type', required=True)
+    piadd.add_argument('-c', '--checksum', help='Image checksum', required=True)
+    piadd.add_argument('-y', '--yocto-id', help='Yocto image name', required=True)
 
     # deployments
     pdeps = sub.add_parser('deployments', help='Commands for deployments')
@@ -56,7 +81,6 @@ def parse_arguments():
 
 
     return parser.parse_args()
-
 
 def do_simple_get(url, **kwargs):
     r = requests.get(url, **kwargs)
@@ -112,19 +136,74 @@ def do_deployments_devices(opts):
 
 def do_deployments(opts):
     logging.debug('deployment opts: %r', opts)
-    if opts.depcommand == 'find':
-        do_deployments_find(opts)
-    elif opts.depcommand == 'status':
-        do_deployments_status(opts)
-    elif opts.depcommand == 'add':
-        do_deployments_add(opts)
-    elif opts.depcommand == 'stats':
-        do_deployments_stats(opts)
-    elif opts.depcommand == 'devices':
-        do_deployments_devices(opts)
+    cmds = {
+        'find': do_deployments_find,
+        'status': do_deployments_status,
+        'add': do_deployments_add,
+        'stats': do_deployments_stats,
+        'status': do_deployments_status,
+        'devices': do_deployments_devices,
+    }
+    run_command(opts.depcommand, cmds, opts)
+
+
+def do_images_add(opts):
+    logging.debug('add image %r', opts)
+    url = opts.service + '/images'
+    r = requests.post(url,
+                      json={
+                          'name': opts.name,
+                          'description': opts.description,
+                          'device_type': opts.device_type,
+                          'yocto_id': opts.yocto_id,
+                          'checksum': opts.checksum,
+                      },
+                      verify=opts.verify)
+    if r.status_code == 201:
+        # created
+        location = r.headers.get('Location', '')
+        print("created with URL: {}".format(location))
+    else:
+        logging.warn('request failed: %s %s', r, r.json())
+
+
+def do_images_upload(opts):
+    logging.debug('get image %s upload', opts.id)
+    url = opts.service + '/images/{}/upload'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def do_images_download(opts):
+    logging.debug('get image %s download', opts.id)
+    url = opts.service + '/images/{}/download'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+def do_images_show(opts):
+    logging.debug('get image %s download', opts.id)
+    url = opts.service + '/images/{}'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def run_command(command, cmds, opts):
+    handler = cmds.get(command, None)
+    if not handler:
+        logging.error('command \'%s\' not supported', command)
+        raise SystemExit(1)
+    else:
+        handler(opts)
 
 def do_images(opts):
-    pass
+    logging.debug('images opts: %r', opts)
+    cmds = {
+        'find': None,
+        'add': do_images_add,
+        'show': do_images_show,
+        'remove': None,
+        'download': do_images_download,
+        'upload': do_images_upload,
+    }
+    run_command(opts.imcommand, cmds, opts)
+
 
 def main(opts):
     logging.debug('starting...')
