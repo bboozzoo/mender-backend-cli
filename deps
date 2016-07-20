@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+from pprint import pprint
+
+import requests
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='deployments client',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d', '--debug', help='Enable debugging output',
+                        default=False, action='store_true')
+    parser.add_argument('-s', '--service', help='Service address',
+                        default='https://localhost:9080/api/integrations/0.1/deployments')
+    parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
+                        default=False, action='store_true')
+    parser.set_defaults(command='')
+    sub = parser.add_subparsers(help='Commands')
+
+    # images
+    pimages = sub.add_parser('images', help='Commands for images')
+    pimages.set_defaults(command='images')
+
+    # deployments
+    pdeps = sub.add_parser('deployments', help='Commands for deployments')
+    pdeps.set_defaults(command='deployments')
+
+    pdsub = pdeps.add_subparsers(help='Commands for deployment')
+
+    # deployment add
+    pdadd = pdsub.add_parser('add', help='Add deployment')
+    pdadd.set_defaults(depcommand='add')
+    pdadd.add_argument('-a', '--artifact-name', help='Artifact name',
+                       required=True)
+    pdadd.add_argument('-e', '--device', help='Devices', action='append',
+                       required=True)
+    pdadd.add_argument('-n', '--name', help='Deployment name',
+                       required=True)
+    # deployment find
+    pdfind = pdsub.add_parser('find', help='Lookup deployment')
+    pdfind.set_defaults(depcommand='find')
+    pdfind.add_argument('name', help='Deployment name')
+    # deployment status
+    pdstatus = pdsub.add_parser('status', help='See status')
+    pdstatus.set_defaults(depcommand='status')
+    pdstatus.add_argument('id', help='Deployment ID')
+    # deployment statistics
+    pdstats = pdsub.add_parser('stats', help='See statistics')
+    pdstats.set_defaults(depcommand='stats')
+    pdstats.add_argument('id', help='Deployment ID')
+    # deployment devices
+    pddevs = pdsub.add_parser('devices', help='List devices')
+    pddevs.set_defaults(depcommand='devices')
+    pddevs.add_argument('id', help='Deployment ID')
+
+
+    return parser.parse_args()
+
+
+def do_simple_get(url, **kwargs):
+    r = requests.get(url, **kwargs)
+    logging.debug(r)
+    if r.status_code == 200:
+        pprint(r.json())
+    else:
+        logging.warn('request failed: %s %s', r, r.json())
+
+
+def do_deployments_find(opts):
+    logging.debug('lookup deployment %s', opts.name)
+    url = opts.service + '/deployments'
+    do_simple_get(url, params={'name': opts.name},
+                  verify=opts.verify)
+
+
+def do_deployments_add(opts):
+    logging.debug('lookup deployment %s', opts.name)
+    url = opts.service + '/deployments'
+    r = requests.post(url,
+                      json={
+                          'name': opts.name,
+                          'artifact_name': opts.artifact_name,
+                          'devices': opts.device,
+                      },
+                      verify=opts.verify)
+    if r.status_code == 201:
+        # created
+        location = r.headers.get('Location', '')
+        print("created with URL: {}".format(location))
+    else:
+        logging.warn('request failed: %s %s', r, r.json())
+
+
+def do_deployments_status(opts):
+    logging.debug('get deployment %s', opts.id)
+    url = opts.service + '/deployments/{}'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def do_deployments_stats(opts):
+    logging.debug('get deployment %s stats', opts.id)
+    url = opts.service + '/deployments/{}/statistics'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def do_deployments_devices(opts):
+    logging.debug('get deployment %s devices', opts.id)
+    url = opts.service + '/deployments/{}/devices'.format(opts.id)
+    do_simple_get(url, verify=opts.verify)
+
+
+def do_deployments(opts):
+    logging.debug('deployment opts: %r', opts)
+    if opts.depcommand == 'find':
+        do_deployments_find(opts)
+    elif opts.depcommand == 'status':
+        do_deployments_status(opts)
+    elif opts.depcommand == 'add':
+        do_deployments_add(opts)
+    elif opts.depcommand == 'stats':
+        do_deployments_stats(opts)
+    elif opts.depcommand == 'devices':
+        do_deployments_devices(opts)
+
+def do_images(opts):
+    pass
+
+def main(opts):
+    logging.debug('starting...')
+
+    opts.verify = not opts.no_verify
+
+    logging.debug('options: %r', opts)
+    try:
+        if opts.command == 'deployments':
+            do_deployments(opts)
+        if opts.command == 'images':
+            do_images(opts)
+    except requests.exceptions.RequestException as re:
+        logging.error('request failed: %s', re)
+
+if __name__ == '__main__':
+    opts = parse_arguments()
+
+    level = logging.INFO
+    if opts.debug:
+        level = logging.DEBUG
+
+    logging.basicConfig(level=level)
+
+    main(opts)
