@@ -47,7 +47,7 @@ def dump_device(data, showkey=True):
 
 def show_device(opts):
     url = opts.service + '/{}/status'.format(opts.device)
-    r = requests.get(opts.service, verify=opts.verify)
+    r = requests.get(url, verify=opts.verify)
     logging.debug("%r", r.status_code)
 
     dump_device(r.json()[0])
