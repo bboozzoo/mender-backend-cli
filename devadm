@@ -68,7 +68,8 @@ def set_device_status(opts, status):
                          'status': status
                      })
     logging.debug("%r", r.status_code)
-    logging.debug('%r', r.json())
+    if r.content:
+        logging.debug('%r', r.json())
 
 def main(opts):
     logging.debug('starting...')
