@@ -81,15 +81,32 @@ def parse_arguments():
     pddevs = pdsub.add_parser('devices', help='List devices')
     pddevs.set_defaults(depcommand='devices')
     pddevs.add_argument('id', help='Deployment ID')
-
+    # deployment device logs
+    pdlogs = pdsub.add_parser('logs', help='Show device deployment logs')
+    pdlogs.set_defaults(depcommand='logs')
+    pdlogs.add_argument('id', help='Deployment ID')
+    pdlogs.add_argument('devid', help='Device ID')
 
     return parser.parse_args()
 
-def do_simple_get(url, **kwargs):
+
+def jsonprinter(rsp):
+    if not isinstance(rsp, requests.Response):
+        raise TypeError("expected requests.Response")
+    pprint(rsp.json())
+
+
+def simpleprinter(rsp):
+    if not isinstance(rsp, requests.Response):
+        raise TypeError("expected requests.Response")
+    print(rsp.text)
+
+
+def do_simple_get(url, printer=jsonprinter, **kwargs):
     r = requests.get(url, **kwargs)
     logging.debug(r)
     if r.status_code == 200:
-        pprint(r.json())
+        printer(r)
     else:
         logging.warn('request failed: %s %s', r, r.json())
 
@@ -137,6 +154,11 @@ def do_deployments_devices(opts):
     do_simple_get(url, verify=opts.verify)
 
 
+def do_deployments_logs(opts):
+    logging.debug('get log for deployment %s on device %s', opts.id, opts.devid)
+    url = opts.service + '/device/deployments/{}/devices/{}/log'.format(opts.id, opts.devid)
+    do_simple_get(url, printer=simpleprinter, verify=opts.verify)
+
 def do_deployments(opts):
     logging.debug('deployment opts: %r', opts)
     cmds = {
@@ -146,6 +168,7 @@ def do_deployments(opts):
         'stats': do_deployments_stats,
         'status': do_deployments_status,
         'devices': do_deployments_devices,
+        'logs': do_deployments_logs,
     }
     run_command(opts.depcommand, cmds, opts)
 
