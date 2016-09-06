@@ -156,7 +156,7 @@ def do_deployments_devices(opts):
 
 def do_deployments_logs(opts):
     logging.debug('get log for deployment %s on device %s', opts.id, opts.devid)
-    url = opts.service + '/device/deployments/{}/devices/{}/log'.format(opts.id, opts.devid)
+    url = opts.service + '/deployments/{}/devices/{}/log'.format(opts.id, opts.devid)
     do_simple_get(url, printer=simpleprinter, verify=opts.verify)
 
 def do_deployments(opts):
