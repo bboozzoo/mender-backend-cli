@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+
+import requests
+import argparse
+import logging
+
+import hashlib
+import json
+import requests
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from base64 import b64encode, b64decode
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+import random
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='device',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d', '--debug', help='Enable debugging output',
+                        default=False, action='store_true')
+    parser.add_argument('-s', '--service', help='Service address',
+                        default='https://localhost:9080/api/devices/0.1'
+                        )
+    parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
+                        default=False, action='store_true')
+    parser.add_argument('-k', '--device-key', help='Device key path',
+                        default='key.priv')
+    parser.add_argument('-o', '--device-token', default='devtoken', help='Device token path')
+    parser.set_defaults(command='')
+    sub = parser.add_subparsers(help='Commands')
+
+    pupdate = sub.add_parser('update', help='Get update')
+    pupdate.set_defaults(command='update')
+
+    pauthorize = sub.add_parser('authorize', help='Authorize')
+    pauthorize.add_argument('device', help='Device ID')
+    pauthorize.add_argument('-s', '--seq-no', default=1, help='Sequence number')
+    pauthorize.add_argument('-m', '--mac-address', default='de:ad:be:ef:00:01',
+                            help='MAC address')
+    pauthorize.add_argument('-t', '--tenant-token', default='dummy', help='Tenant token')
+    pauthorize.set_defaults(command='authorize')
+
+    pkeys = sub.add_parser('key', help='device key')
+    pkeys.set_defaults(command='key')
+
+    return parser.parse_args()
+
+def load_file(path):
+    with open(path) as inf:
+        data = inf.read()
+    return data
+
+def save_file(path, data):
+    with open(path, 'wb') as outf:
+        if type(data) == bytes:
+            outf.write(data)
+        else:
+            outf.write(data.encode())
+
+def gen_privkey():
+    private = RSA.generate(1024)
+    return private.exportKey()
+
+def load_privkey(path):
+    priv = load_file(path)
+    return RSA.importKey(priv)
+
+def sign(data, key):
+    signer = PKCS1_v1_5.new(key)
+    digest = SHA256.new()
+    digest.update(data.encode())
+    sign = signer.sign(digest)
+    return b64encode(sign)
+
+def do_authorize(opts):
+    logging.debug('authorize as device %s', opts.device)
+    url = opts.service + '/authentication/auth_requests'
+
+    try:
+        key = load_privkey(opts.device_key)
+    except IOError:
+        logging.error('failed to load key from %s', opts.device_key)
+        return
+
+    identity = json.dumps({
+        'mac': opts.mac_address,
+    })
+    logging.info('request sequence number %s', opts.seq_no)
+    logging.debug('identity: %s', identity)
+    data = json.dumps({
+        'id_data': identity,
+        'pubkey': str(key.publickey().exportKey(), 'utf-8'),
+        'seq_no': int(opts.seq_no),
+        'tenant_token': opts.tenant_token,
+    })
+    logging.debug('request data: %s', data)
+    signature = sign(data, key)
+    h = {
+        'X-MEN-Signature': signature,
+        'Content-Type': 'application/json'
+    }
+    r = requests.post(url,
+                      data=data,
+                      headers=h,
+                      verify=opts.verify)
+
+    if r.status_code == 200:
+        logging.info('request successful')
+        logging.info('token: %s', r.text)
+        save_file(opts.device_token, r.text)
+    else:
+        logging.warn('request failed: %s %s', r, r.text)
+
+
+def do_key(opts):
+    logging.info('generating new key, writing to %s', opts.device_key)
+    priv = gen_privkey()
+    save_file(opts.device_key, priv)
+
+def do_update(opts):
+    logging.info('get update')
+
+def main(opts):
+    logging.debug('starting...')
+
+    opts.verify = not opts.no_verify
+
+    logging.debug('options: %r', opts)
+    try:
+        if opts.command == 'authorize':
+            do_authorize(opts)
+        if opts.command == 'key':
+            do_key(opts)
+        if opts.command == 'update':
+            do_update(opts)
+    except requests.exceptions.RequestException as re:
+        logging.error('request failed: %s', re)
+
+if __name__ == '__main__':
+    opts = parse_arguments()
+
+    level = logging.INFO
+    if opts.debug:
+        level = logging.DEBUG
+
+    logging.basicConfig(level=level)
+
+    main(opts)
