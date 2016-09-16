@@ -3,6 +3,7 @@
 import requests
 import argparse
 import logging
+from common import run_command
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='device admission client',
@@ -78,14 +79,13 @@ def main(opts):
 
     logging.debug('options: %r', opts)
     try:
-        if opts.command == 'list':
-            list_devices(opts)
-        if opts.command == 'accept':
-            set_device_status(opts, 'accepted')
-        if opts.command == 'reject':
-            set_device_status(opts, 'rejected')
-        if opts.command == 'show':
-            show_device(opts)
+        commands = {
+            'list': list_devices,
+            'accept': lambda o: set_device_status(o, 'accepted'),
+            'reject': lambda o: set_device_status(o, 'rejected'),
+            'show': show_device,
+        }
+        run_command(opts.command, commands, opts)
     except requests.exceptions.RequestException as re:
         logging.error('request failed: %s', re)
 

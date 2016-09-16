@@ -3,6 +3,7 @@
 import argparse
 import logging
 from pprint import pprint
+from common import run_command
 
 import requests
 
@@ -217,14 +218,6 @@ def do_images_list(opts):
     do_simple_get(url, verify=opts.verify)
 
 
-def run_command(command, cmds, opts):
-    handler = cmds.get(command, None)
-    if not handler:
-        logging.error('command \'%s\' not supported', command)
-        raise SystemExit(1)
-    else:
-        handler(opts)
-
 def do_images(opts):
     logging.debug('images opts: %r', opts)
     cmds = {
@@ -246,10 +239,11 @@ def main(opts):
 
     logging.debug('options: %r', opts)
     try:
-        if opts.command == 'deployments':
-            do_deployments(opts)
-        if opts.command == 'images':
-            do_images(opts)
+        commands = {
+            'deployments': do_deployments,
+            'images': do_images,
+        }
+        run_command(opts.command, commands, opts)
     except requests.exceptions.RequestException as re:
         logging.error('request failed: %s', re)
 
