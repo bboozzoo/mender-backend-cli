@@ -40,6 +40,7 @@ def dump_device(data, showkey=True):
     print('device: %s' % data['id'])
     print('    status: %s' % data['status'])
     print('    attributes:')
+    print('    request time: %s' % data['request_time'])
     for k, v in data['attributes'].items():
         print('        %s : %s' % (k, v))
     if showkey:
