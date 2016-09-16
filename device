@@ -14,6 +14,8 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import random
 
+from common import run_command
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='device',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -43,6 +45,9 @@ def parse_arguments():
 
     pkeys = sub.add_parser('key', help='device key')
     pkeys.set_defaults(command='key')
+
+    ptoken = sub.add_parser('token', help='device token')
+    ptoken.set_defaults(command='token')
 
     return parser.parse_args()
 
@@ -121,6 +126,33 @@ def do_key(opts):
 def do_update(opts):
     logging.info('get update')
 
+def pad_b64(b64s):
+    pad = len(b64s) % 4
+    if pad != 0:
+        return b64s + '=' * pad
+    return b64s
+
+def do_token(opts):
+    logging.info('show token')
+    try:
+        tok = load_file(opts.device_token)
+    except IOError as err:
+        logging.error('failed to load token from %s: %s',
+                      opts.device_token, err)
+        return
+
+    sp = tok.split('.')
+    for n, v in zip(['type', 'claims'], sp[0:2]):
+        pad = pad_b64(v)
+        logging.debug('padded: %s', pad)
+        raw = b64decode(pad)
+        # logging.info('%s: %s', n, raw)
+        d = json.loads(str(raw, 'utf-8'))
+        print('{}\n\t'.format(n), d)
+
+    print('signature:\n\t', sp[2])
+
+
 def main(opts):
     logging.debug('starting...')
 
@@ -128,12 +160,13 @@ def main(opts):
 
     logging.debug('options: %r', opts)
     try:
-        if opts.command == 'authorize':
-            do_authorize(opts)
-        if opts.command == 'key':
-            do_key(opts)
-        if opts.command == 'update':
-            do_update(opts)
+        commands = {
+            'authorize': do_authorize,
+            'key': do_key,
+            'update': do_update,
+            'token': do_token,
+        }
+        run_command(opts.command, commands, opts)
     except requests.exceptions.RequestException as re:
         logging.error('request failed: %s', re)
 
