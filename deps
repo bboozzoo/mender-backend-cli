@@ -27,6 +27,7 @@ def parse_arguments():
     piup = pisub.add_parser('upload', help='Upload image')
     piup.set_defaults(imcommand='upload')
     piup.add_argument('id', help='Image ID')
+    piup.add_argument('infile', help='Image file')
     # image download
     pidown = pisub.add_parser('download', help='Download image')
     pidown.set_defaults(imcommand='download')
@@ -110,6 +111,7 @@ def do_simple_get(url, printer=jsonprinter, **kwargs):
         printer(r)
     else:
         logging.warn('request failed: %s %s', r, r.json())
+    return r
 
 
 def do_deployments_find(opts):
@@ -197,7 +199,18 @@ def do_images_add(opts):
 def do_images_upload(opts):
     logging.debug('get image %s upload', opts.id)
     url = opts.service + '/images/{}/upload'.format(opts.id)
-    do_simple_get(url, verify=opts.verify)
+    r = do_simple_get(url, verify=opts.verify)
+    uri = r.json().get('uri', None)
+    if not uri:
+        logging.error('no upload url?')
+        return
+    logging.info('uploading %s to %s', opts.infile, uri)
+    with open(opts.infile, 'rb') as inf:
+        r = requests.put(uri, headers={}, data=inf)
+        if r.status_code != 200:
+            logging.info('upload failed: %s', r.text)
+        else:
+            logging.info('file uploaded')
 
 
 def do_images_download(opts):
