@@ -11,7 +11,7 @@ def parse_arguments():
     parser.add_argument('-d', '--debug', help='Enable debugging output',
                         default=False, action='store_true')
     parser.add_argument('-s', '--service', help='Service address',
-                        default='https://localhost:9080/api/integrations/0.1/admission/devices'
+                        default='https://docker.mender.io:9080/api/integrations/0.1/admission/devices'
                         )
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
