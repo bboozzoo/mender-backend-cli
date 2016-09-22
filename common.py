@@ -1,3 +1,5 @@
+import logging
+
 def run_command(command, cmds, opts):
     '''Locate and call `command` handler in a map `cmds`. The handler is called
     with `opts` as its first argument.
