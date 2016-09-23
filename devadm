@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import requests
 import argparse
 import logging
+
+import requests
 from common import run_command, CommandNotSupportedError
 
 def parse_arguments():
@@ -11,8 +12,7 @@ def parse_arguments():
     parser.add_argument('-d', '--debug', help='Enable debugging output',
                         default=False, action='store_true')
     parser.add_argument('-s', '--service', help='Service address',
-                        default='https://docker.mender.io:9080/api/integrations/0.1/admission/devices'
-                        )
+                        default='https://docker.mender.io:9080/api/integrations/0.1/admission/devices')
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
     parser.set_defaults(command='')
@@ -41,37 +41,37 @@ def dump_device(data, showkey=True):
     print('    status: %s' % data['status'])
     print('    request time: %s' % data['request_time'])
     print('    attributes:')
-    for k, v in data['attributes'].items():
-        print('        %s : %s' % (k, v))
+    for key, val in data['attributes'].items():
+        print('        %s : %s' % (key, val))
     if showkey:
         print('    public key:')
         print(data['key'])
 
 def show_device(opts):
     url = opts.service + '/{}'.format(opts.device)
-    r = requests.get(url, verify=opts.verify)
-    logging.debug("%r", r.status_code)
+    rsp = requests.get(url, verify=opts.verify)
+    logging.debug("%r", rsp.status_code)
 
-    dump_device(r.json())
+    dump_device(rsp.json())
 
 def list_devices(opts):
-    r = requests.get(opts.service, verify=opts.verify)
-    logging.debug("%r", r.status_code)
+    rsp = requests.get(opts.service, verify=opts.verify)
+    logging.debug("%r", rsp.status_code)
 
-    for d in r.json():
-        dump_device(d, showkey=False)
+    for dev in rsp.json():
+        dump_device(dev, showkey=False)
 
 def set_device_status(opts, status):
     url = opts.service + '/{}/status'.format(opts.device)
     logging.debug('device URL: %s', url)
-    r = requests.put(url,
-                     verify=opts.verify,
-                     json={
-                         'status': status
-                     })
-    logging.debug("%r", r.status_code)
-    if r.content:
-        logging.debug('%r', r.json())
+    rsp = requests.put(url,
+                       verify=opts.verify,
+                       json={
+                           'status': status
+                       })
+    logging.debug("%r", rsp.status_code)
+    if rsp.content:
+        logging.debug('%r', rsp.json())
 
 def main(opts):
     logging.debug('starting...')
@@ -87,19 +87,19 @@ def main(opts):
             'show': show_device,
         }
         run_command(opts.command, commands, opts)
-    except requests.exceptions.RequestException as re:
-        logging.error('request failed: %s', re)
-    except CommandNotSupportedError as cerr:
+    except requests.exceptions.RequestException as rerr:
+        logging.error('request failed: %s', rerr)
+    except CommandNotSupportedError:
         logging.error('incomplete or unsupported command, see --help')
 
 
 if __name__ == '__main__':
-    opts = parse_arguments()
+    args = parse_arguments()
 
     level = logging.INFO
-    if opts.debug:
+    if args.debug:
         level = logging.DEBUG
 
     logging.basicConfig(level=level)
 
-    main(opts)
+    main(args)
