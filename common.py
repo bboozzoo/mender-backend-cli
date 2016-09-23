@@ -1,10 +1,19 @@
-import logging
+"""common routines"""
+
+class CommandNotSupportedError(Exception):
+    """Indicates that `command` is not supported"""
+    def __init__(self, command):
+        super().__init__(command)
+        self.command = command
+    def __str__(self):
+        return 'command {} is not supported'.format(self.command)
+
 
 def run_command(command, cmds, opts):
     '''Locate and call `command` handler in a map `cmds`. The handler is called
     with `opts` as its first argument.
 
-    Will throw a SystemExit(1) if command is not found.
+    Will raise CommandNotSupport(command) if command is not found.
 
     :param command: command as string
     :param cmds: map of commands, command name being the key, a function being the value
@@ -14,7 +23,6 @@ def run_command(command, cmds, opts):
     '''
     handler = cmds.get(command, None)
     if not handler:
-        logging.error('command \'%s\' not supported', command)
-        raise SystemExit(1)
+        raise CommandNotSupportedError(command)
     else:
         handler(opts)
