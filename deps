@@ -3,7 +3,7 @@
 import argparse
 import logging
 from pprint import pprint
-from common import run_command
+from common import run_command, CommandNotSupportedError
 
 import requests
 
@@ -259,6 +259,9 @@ def main(opts):
         run_command(opts.command, commands, opts)
     except requests.exceptions.RequestException as re:
         logging.error('request failed: %s', re)
+    except CommandNotSupportedError as cerr:
+        logging.error('incomplete or unsupported command, see --help')
+
 
 if __name__ == '__main__':
     opts = parse_arguments()
