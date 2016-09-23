@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 
-import requests
 import argparse
 import logging
-
-import hashlib
 import json
+from base64 import b64encode, b64decode
+
 import requests
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
-from base64 import b64encode, b64decode
 from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-import random
 
 from common import run_command, CommandNotSupportedError
 
@@ -22,8 +18,7 @@ def parse_arguments():
     parser.add_argument('-d', '--debug', help='Enable debugging output',
                         default=False, action='store_true')
     parser.add_argument('-s', '--service', help='Service address',
-                        default='https://docker.mender.io:9080/api/devices/0.1'
-                        )
+                        default='https://docker.mender.io:9080/api/devices/0.1')
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
     parser.add_argument('-k', '--device-key', help='Device key path',
@@ -58,7 +53,7 @@ def load_file(path):
 
 def save_file(path, data):
     with open(path, 'wb') as outf:
-        if type(data) == bytes:
+        if isinstance(data, bytes):
             outf.write(data)
         else:
             outf.write(data.encode())
@@ -75,8 +70,8 @@ def sign(data, key):
     signer = PKCS1_v1_5.new(key)
     digest = SHA256.new()
     digest.update(data.encode())
-    sign = signer.sign(digest)
-    return b64encode(sign)
+    signed = signer.sign(digest)
+    return b64encode(signed)
 
 def do_authorize(opts):
     logging.debug('authorize as device %s', opts.device)
@@ -101,21 +96,21 @@ def do_authorize(opts):
     })
     logging.debug('request data: %s', data)
     signature = sign(data, key)
-    h = {
+    hdrs = {
         'X-MEN-Signature': signature,
         'Content-Type': 'application/json'
     }
-    r = requests.post(url,
-                      data=data,
-                      headers=h,
-                      verify=opts.verify)
+    rsp = requests.post(url,
+                        data=data,
+                        headers=hdrs,
+                        verify=opts.verify)
 
-    if r.status_code == 200:
+    if rsp.status_code == 200:
         logging.info('request successful')
-        logging.info('token: %s', r.text)
-        save_file(opts.device_token, r.text)
+        logging.info('token: %s', rsp.text)
+        save_file(opts.device_token, rsp.text)
     else:
-        logging.warn('request failed: %s %s', r, r.text)
+        logging.warning('request failed: %s %s', rsp, rsp.text)
 
 
 def do_key(opts):
@@ -141,16 +136,16 @@ def do_token(opts):
                       opts.device_token, err)
         return
 
-    sp = tok.split('.')
-    for n, v in zip(['type', 'claims'], sp[0:2]):
-        pad = pad_b64(v)
+    split = tok.split('.')
+    for name, val in zip(['type', 'claims'], split[0:2]):
+        pad = pad_b64(val)
         logging.debug('padded: %s', pad)
         raw = b64decode(pad)
         # logging.info('%s: %s', n, raw)
-        d = json.loads(str(raw, 'utf-8'))
-        print('{}\n\t'.format(n), d)
+        data = json.loads(str(raw, 'utf-8'))
+        print('{}\n\t'.format(name), data)
 
-    print('signature:\n\t', sp[2])
+    print('signature:\n\t', split[2])
 
 
 def main(opts):
@@ -167,14 +162,14 @@ def main(opts):
             'token': do_token,
         }
         run_command(opts.command, commands, opts)
-    except requests.exceptions.RequestException as re:
-        logging.error('request failed: %s', re)
-    except CommandNotSupportedError as cerr:
+    except requests.exceptions.RequestException as rerr:
+        logging.error('request failed: %s', rerr)
+    except CommandNotSupportedError:
         logging.error('incomplete or unsupported command, see --help')
 
 
 if __name__ == '__main__':
-    opts = parse_arguments()
+    args = parse_arguments()
 
     level = logging.INFO
     if opts.debug:
@@ -182,4 +177,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=level)
 
-    main(opts)
+    main(args)
