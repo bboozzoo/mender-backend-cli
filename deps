@@ -105,13 +105,13 @@ def simpleprinter(rsp):
 
 
 def do_simple_get(url, printer=jsonprinter, **kwargs):
-    r = requests.get(url, **kwargs)
-    logging.debug(r)
-    if r.status_code == 200:
-        printer(r)
+    rsp = requests.get(url, **kwargs)
+    logging.debug(rsp)
+    if rsp.status_code == 200:
+        printer(rsp)
     else:
-        logging.warn('request failed: %s %s', r, r.json())
-    return r
+        logging.warning('request failed: %s %s', rsp, rsp.json())
+    return rsp
 
 
 def do_deployments_find(opts):
@@ -124,19 +124,19 @@ def do_deployments_find(opts):
 def do_deployments_add(opts):
     logging.debug('lookup deployment %s', opts.name)
     url = opts.service + '/deployments'
-    r = requests.post(url,
-                      json={
-                          'name': opts.name,
-                          'artifact_name': opts.artifact_name,
-                          'devices': opts.device,
-                      },
-                      verify=opts.verify)
-    if r.status_code == 201:
+    rsp = requests.post(url,
+                        json={
+                            'name': opts.name,
+                            'artifact_name': opts.artifact_name,
+                            'devices': opts.device,
+                        },
+                        verify=opts.verify)
+    if rsp.status_code == 201:
         # created
-        location = r.headers.get('Location', '')
+        location = rsp.headers.get('Location', '')
         print("created with URL: {}".format(location))
     else:
-        logging.warn('request failed: %s %s', r, r.json())
+        logging.warning('request failed: %s %s', rsp, rsp.json())
 
 
 def do_deployments_status(opts):
@@ -165,13 +165,12 @@ def do_deployments_logs(opts):
 def do_deployments(opts):
     logging.debug('deployment opts: %r', opts)
     cmds = {
-        'find': do_deployments_find,
-        'status': do_deployments_status,
         'add': do_deployments_add,
+        'devices': do_deployments_devices,
+        'find': do_deployments_find,
+        'logs': do_deployments_logs,
         'stats': do_deployments_stats,
         'status': do_deployments_status,
-        'devices': do_deployments_devices,
-        'logs': do_deployments_logs,
     }
     run_command(opts.depcommand, cmds, opts)
 
@@ -179,36 +178,36 @@ def do_deployments(opts):
 def do_images_add(opts):
     logging.debug('add image %r', opts)
     url = opts.service + '/images'
-    r = requests.post(url,
-                      json={
-                          'name': opts.name,
-                          'description': opts.description,
-                          'device_type': opts.device_type,
-                          'yocto_id': opts.yocto_id,
-                          'checksum': opts.checksum,
-                      },
-                      verify=opts.verify)
-    if r.status_code == 201:
+    rsp = requests.post(url,
+                        json={
+                            'name': opts.name,
+                            'description': opts.description,
+                            'device_type': opts.device_type,
+                            'yocto_id': opts.yocto_id,
+                            'checksum': opts.checksum,
+                        },
+                        verify=opts.verify)
+    if rsp.status_code == 201:
         # created
-        location = r.headers.get('Location', '')
+        location = rsp.headers.get('Location', '')
         print("created with URL: {}".format(location))
     else:
-        logging.warn('request failed: %s %s', r, r.json())
+        logging.warning('request failed: %s %s', rsp, rsp.json())
 
 
 def do_images_upload(opts):
     logging.debug('get image %s upload', opts.id)
     url = opts.service + '/images/{}/upload'.format(opts.id)
-    r = do_simple_get(url, verify=opts.verify)
-    uri = r.json().get('uri', None)
+    rsp = do_simple_get(url, verify=opts.verify)
+    uri = rsp.json().get('uri', None)
     if not uri:
         logging.error('no upload url?')
         return
     logging.info('uploading %s to %s', opts.infile, uri)
     with open(opts.infile, 'rb') as inf:
-        r = requests.put(uri, headers={}, data=inf)
-        if r.status_code != 200:
-            logging.info('upload failed: %s', r.text)
+        rsp = requests.put(uri, headers={}, data=inf)
+        if rsp.status_code != 200:
+            logging.info('upload failed: %s', rsp.text)
         else:
             logging.info('file uploaded')
 
@@ -257,19 +256,19 @@ def main(opts):
             'images': do_images,
         }
         run_command(opts.command, commands, opts)
-    except requests.exceptions.RequestException as re:
-        logging.error('request failed: %s', re)
-    except CommandNotSupportedError as cerr:
+    except requests.exceptions.RequestException as rerr:
+        logging.error('request failed: %s', rerr)
+    except CommandNotSupportedError:
         logging.error('incomplete or unsupported command, see --help')
 
 
 if __name__ == '__main__':
-    opts = parse_arguments()
+    args = parse_arguments()
 
     level = logging.INFO
-    if opts.debug:
+    if args.debug:
         level = logging.DEBUG
 
     logging.basicConfig(level=level)
 
-    main(opts)
+    main(args)
