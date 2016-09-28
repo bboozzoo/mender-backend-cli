@@ -2,6 +2,8 @@
 
 import argparse
 import logging
+import io
+import json
 from pprint import pprint
 from common import run_command, CommandNotSupportedError
 
@@ -23,11 +25,6 @@ def parse_arguments():
     pimages = sub.add_parser('images', help='Commands for images')
     pimages.set_defaults(command='images', imcommand='')
     pisub = pimages.add_subparsers(help='Commands for images')
-    # image upload
-    piup = pisub.add_parser('upload', help='Upload image')
-    piup.set_defaults(imcommand='upload')
-    piup.add_argument('id', help='Image ID')
-    piup.add_argument('infile', help='Image file')
     # image download
     pidown = pisub.add_parser('download', help='Download image')
     pidown.set_defaults(imcommand='download')
@@ -44,13 +41,14 @@ def parse_arguments():
     pishow = pisub.add_parser('list', help='List images')
     pishow.set_defaults(imcommand='list')
     # image add
-    piadd = pisub.add_parser('add', help='Add image')
+    piadd = pisub.add_parser('add', help='Add image and upload its contents')
     piadd.set_defaults(imcommand='add')
     piadd.add_argument('-n', '--name', help='Image name', required=True)
     piadd.add_argument('-e', '--description', help='Image description', required=True)
     piadd.add_argument('-t', '--device-type', help='Device type', required=True)
     piadd.add_argument('-c', '--checksum', help='Image checksum', required=True)
     piadd.add_argument('-y', '--yocto-id', help='Yocto image name', required=True)
+    piadd.add_argument('infile', help='Image file')
 
     # deployments
     pdeps = sub.add_parser('deployments', help='Commands for deployments')
@@ -178,38 +176,42 @@ def do_deployments(opts):
 def do_images_add(opts):
     logging.debug('add image %r', opts)
     url = opts.service + '/images'
-    rsp = requests.post(url,
-                        json={
-                            'name': opts.name,
-                            'description': opts.description,
-                            'device_type': opts.device_type,
-                            'yocto_id': opts.yocto_id,
-                            'checksum': opts.checksum,
-                        },
-                        verify=opts.verify)
+    hdrs = {
+        'Content-Type': 'multipart/mixed',
+    }
+    image = {
+        'name': opts.name,
+        'description': opts.description,
+        'device_type': opts.device_type,
+        'yocto_id': opts.yocto_id,
+        'checksum': opts.checksum,
+    }
+    files = {
+        "data": ("", io.StringIO(json.dumps(image)), "application/json", {}),
+        "file": (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {}),
+    }
+    # image add expects a multipart/mixed POST, need to go through some steps
+    # to make it work
+    s = requests.Session()
+    # prep a request
+    req = requests.Request('POST', url, files=files)
+    prepped = s.prepare_request(req)
+    # multipart/ has an explicitly specified boundary, by default requests will
+    # build a multipart/form-data request, with boundary already set properly,
+    # so the header looks like this:
+    #   Content-Type: multipart/form-data; boundary=b2797565fefc4853863b8b9e4a6afaf4
+    # but we want:
+    #   Content-Type: multipart/mixed; boundary=b2797565fefc4853863b8b9e4a6afaf4
+    # be extra lazy, just replace /form-data with /mixed
+    hdrcontent = prepped.headers['Content-Type']
+    prepped.headers['Content-Type'] = hdrcontent.replace('/form-data', '/mixed')
+    rsp = s.send(prepped, verify=opts.verify)
     if rsp.status_code == 201:
         # created
         location = rsp.headers.get('Location', '')
         print("created with URL: {}".format(location))
     else:
         logging.warning('request failed: %s %s', rsp, rsp.json())
-
-
-def do_images_upload(opts):
-    logging.debug('get image %s upload', opts.id)
-    url = opts.service + '/images/{}/upload'.format(opts.id)
-    rsp = do_simple_get(url, verify=opts.verify)
-    uri = rsp.json().get('uri', None)
-    if not uri:
-        logging.error('no upload url?')
-        return
-    logging.info('uploading %s to %s', opts.infile, uri)
-    with open(opts.infile, 'rb') as inf:
-        rsp = requests.put(uri, headers={}, data=inf)
-        if rsp.status_code != 200:
-            logging.info('upload failed: %s', rsp.text)
-        else:
-            logging.info('file uploaded')
 
 
 def do_images_download(opts):
@@ -239,7 +241,6 @@ def do_images(opts):
         'show': do_images_show,
         'remove': None,
         'download': do_images_download,
-        'upload': do_images_upload,
     }
     run_command(opts.imcommand, cmds, opts)
 
