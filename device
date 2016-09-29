@@ -31,7 +31,6 @@ def parse_arguments():
     pupdate.set_defaults(command='update')
 
     pauthorize = sub.add_parser('authorize', help='Authorize')
-    pauthorize.add_argument('device', help='Device ID')
     pauthorize.add_argument('-s', '--seq-no', default=1, help='Sequence number')
     pauthorize.add_argument('-m', '--mac-address', default='de:ad:be:ef:00:01',
                             help='MAC address')
@@ -74,7 +73,6 @@ def sign(data, key):
     return b64encode(signed)
 
 def do_authorize(opts):
-    logging.debug('authorize as device %s', opts.device)
     url = opts.service + '/authentication/auth_requests'
 
     try:
