@@ -172,7 +172,7 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     level = logging.INFO
-    if opts.debug:
+    if args.debug:
         level = logging.DEBUG
 
     logging.basicConfig(level=level)
