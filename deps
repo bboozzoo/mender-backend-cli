@@ -51,6 +51,12 @@ def parse_arguments():
     piadd.add_argument('-y', '--yocto-id', help='Yocto image name', required=True)
     piadd.add_argument('infile', help='Image file')
 
+    piartifactadd = pisub.add_parser('add-artifact', help='Add image artifact and upload its contents')
+    piartifactadd.set_defaults(imcommand='add-artifact')
+    piartifactadd.add_argument('-n', '--name', help='Image name', required=True)
+    piartifactadd.add_argument('-e', '--description', help='Image description', required=True)
+    piartifactadd.add_argument('infile', help='Image file')
+
     # deployments
     pdeps = sub.add_parser('deployments', help='Commands for deployments')
     pdeps.set_defaults(command='deployments', depcommand='')
@@ -202,6 +208,30 @@ def do_images_add(opts):
     else:
         logging.warning('request failed: %s %s', rsp, rsp.json())
 
+def do_images_artifact_add(opts):
+    logging.debug('add image artifact %r', opts)
+    url = opts.service + '/images'
+    image = {
+        'name': opts.name,
+        'description': opts.description,
+    }
+    # build contents of multipart/form-data, image meta must come first, hence
+    # we use an OrderedDict to preserve the order
+    files = OrderedDict()
+    for k, v in image.items():
+        files[k] = (None, io.StringIO(v))
+    # followed by firmware data
+    files['firmware'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
+
+    rsp = requests.post(url, files=files, verify=opts.verify)
+    if rsp.status_code == 201:
+        # created
+        location = rsp.headers.get('Location', '')
+        print("created with URL: {}".format(location))
+        print('image ID: ', location.rsplit('/')[-1])
+    else:
+        logging.warning('request failed: %s %s', rsp, rsp.json())
+
 
 def do_images_download(opts):
     logging.debug('get image %s download', opts.id)
@@ -227,6 +257,7 @@ def do_images(opts):
         'find': None,
         'list': do_images_list,
         'add': do_images_add,
+        'add-artifact': do_images_artifact_add,
         'show': do_images_show,
         'remove': None,
         'download': do_images_download,
