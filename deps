@@ -134,6 +134,7 @@ def do_deployments_add(opts):
         # created
         location = rsp.headers.get('Location', '')
         print("created with URL: {}".format(location))
+        print('deployment ID: ', location.rsplit('/')[-1])
     else:
         logging.warning('request failed: %s %s', rsp, rsp.json())
 
@@ -197,6 +198,7 @@ def do_images_add(opts):
         # created
         location = rsp.headers.get('Location', '')
         print("created with URL: {}".format(location))
+        print('image ID: ', location.rsplit('/')[-1])
     else:
         logging.warning('request failed: %s %s', rsp, rsp.json())
 
