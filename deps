@@ -4,6 +4,7 @@ import argparse
 import logging
 import io
 import json
+from collections import OrderedDict
 from pprint import pprint
 from common import run_command, CommandNotSupportedError
 
@@ -176,9 +177,6 @@ def do_deployments(opts):
 def do_images_add(opts):
     logging.debug('add image %r', opts)
     url = opts.service + '/images'
-    hdrs = {
-        'Content-Type': 'multipart/mixed',
-    }
     image = {
         'name': opts.name,
         'description': opts.description,
@@ -186,26 +184,15 @@ def do_images_add(opts):
         'yocto_id': opts.yocto_id,
         'checksum': opts.checksum,
     }
-    files = {
-        "data": ("", io.StringIO(json.dumps(image)), "application/json", {}),
-        "file": (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {}),
-    }
-    # image add expects a multipart/mixed POST, need to go through some steps
-    # to make it work
-    s = requests.Session()
-    # prep a request
-    req = requests.Request('POST', url, files=files)
-    prepped = s.prepare_request(req)
-    # multipart/ has an explicitly specified boundary, by default requests will
-    # build a multipart/form-data request, with boundary already set properly,
-    # so the header looks like this:
-    #   Content-Type: multipart/form-data; boundary=b2797565fefc4853863b8b9e4a6afaf4
-    # but we want:
-    #   Content-Type: multipart/mixed; boundary=b2797565fefc4853863b8b9e4a6afaf4
-    # be extra lazy, just replace /form-data with /mixed
-    hdrcontent = prepped.headers['Content-Type']
-    prepped.headers['Content-Type'] = hdrcontent.replace('/form-data', '/mixed')
-    rsp = s.send(prepped, verify=opts.verify)
+    # build contents of multipart/form-data, image meta must come first, hence
+    # we use an OrderedDict to preserve the order
+    files = OrderedDict()
+    for k, v in image.items():
+        files[k] = (None, io.StringIO(v))
+    # followed by firmware data
+    files['firmware'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
+
+    rsp = requests.post(url, files=files, verify=opts.verify)
     if rsp.status_code == 201:
         # created
         location = rsp.headers.get('Location', '')
