@@ -1,49 +1,49 @@
-#!/usr/bin/env python3
-
-import argparse
 import logging
 import json
 from base64 import b64encode, b64decode
 
 import requests
+
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 
-from common import run_command, CommandNotSupportedError
+from mender.cli.utils import run_command
+from mender.client import device_url, do_simple_get, errorprinter, jsonprinter
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='device',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-d', '--debug', help='Enable debugging output',
-                        default=False, action='store_true')
-    parser.add_argument('-s', '--service', help='Service address',
-                        default='https://docker.mender.io:8080/api/devices/0.1')
-    parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
-                        default=False, action='store_true')
-    parser.add_argument('-k', '--device-key', help='Device key path',
+def add_args(sub):
+    pdev = sub.add_subparsers(help='Commands for device')
+    sub.set_defaults(devcommand='')
+
+    sub.add_argument('-k', '--device-key', help='Device key path',
                         default='key.priv')
-    parser.add_argument('-o', '--device-token', default='devtoken', help='Device token path')
-    parser.set_defaults(command='')
-    sub = parser.add_subparsers(help='Commands')
+    sub.add_argument('-o', '--device-token', default='devtoken', help='Device token path')
 
-    pupdate = sub.add_parser('update', help='Get update')
-    pupdate.set_defaults(command='update')
+    pupdate = pdev.add_parser('update', help='Get update')
+    pupdate.set_defaults(devcommand='update')
 
-    pauthorize = sub.add_parser('authorize', help='Authorize')
+    pauthorize = pdev.add_parser('authorize', help='Authorize')
     pauthorize.add_argument('-s', '--seq-no', default=1, help='Sequence number')
     pauthorize.add_argument('-m', '--mac-address', default='de:ad:be:ef:00:01',
                             help='MAC address')
     pauthorize.add_argument('-t', '--tenant-token', default='dummy', help='Tenant token')
-    pauthorize.set_defaults(command='authorize')
+    pauthorize.set_defaults(devcommand='authorize')
 
-    pkeys = sub.add_parser('key', help='device key')
-    pkeys.set_defaults(command='key')
+    pkeys = pdev.add_parser('key', help='device key')
+    pkeys.set_defaults(devcommand='key')
 
-    ptoken = sub.add_parser('token', help='device token')
-    ptoken.set_defaults(command='token')
+    ptoken = pdev.add_parser('token', help='device token')
+    ptoken.set_defaults(devcommand='token')
 
-    return parser.parse_args()
+
+def do_main(opts):
+    commands = {
+        'authorize': do_authorize,
+        'key': do_key,
+        'update': do_update,
+        'token': do_token,
+    }
+    run_command(opts.devcommand, commands, opts)
 
 def load_file(path):
     with open(path) as inf:
@@ -73,7 +73,7 @@ def sign(data, key):
     return b64encode(signed)
 
 def do_authorize(opts):
-    url = opts.service + '/authentication/auth_requests'
+    url = device_url(opts.service, '/authentication/auth_requests')
 
     try:
         key = load_privkey(opts.device_key)
@@ -116,8 +116,27 @@ def do_key(opts):
     priv = gen_privkey()
     save_file(opts.device_key, priv)
 
+
 def do_update(opts):
-    logging.info('get update')
+    def updateprinter(rsp):
+        if rsp.status_code == 204:
+            print('no update available')
+        elif rsp.status_code == 200:
+            jsonprinter(rsp)
+        else:
+            errorprinter(rsp)
+
+    url = device_url(opts.service, '/deployments/device/update')
+    token = load_file(opts.device_token)
+    headers = headers={
+        'Authorization': 'Bearer {}'.format(token),
+    }
+    logging.debug('with headers: %s', headers)
+    do_simple_get(url, printer=updateprinter,
+                  success=[200, 204],
+                  headers=headers,
+                  verify=opts.verify)
+
 
 def pad_b64(b64s):
     pad = len(b64s) % 4
@@ -144,35 +163,3 @@ def do_token(opts):
         print('{}\n\t'.format(name), data)
 
     print('signature:\n\t', split[2])
-
-
-def main(opts):
-    logging.debug('starting...')
-
-    opts.verify = not opts.no_verify
-
-    logging.debug('options: %r', opts)
-    try:
-        commands = {
-            'authorize': do_authorize,
-            'key': do_key,
-            'update': do_update,
-            'token': do_token,
-        }
-        run_command(opts.command, commands, opts)
-    except requests.exceptions.RequestException as rerr:
-        logging.error('request failed: %s', rerr)
-    except CommandNotSupportedError:
-        logging.error('incomplete or unsupported command, see --help')
-
-
-if __name__ == '__main__':
-    args = parse_arguments()
-
-    level = logging.INFO
-    if args.debug:
-        level = logging.DEBUG
-
-    logging.basicConfig(level=level)
-
-    main(args)

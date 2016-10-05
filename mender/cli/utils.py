@@ -1,13 +1,4 @@
-"""common routines"""
-
-class CommandNotSupportedError(Exception):
-    """Indicates that `command` is not supported"""
-    def __init__(self, command):
-        super().__init__(command)
-        self.command = command
-    def __str__(self):
-        return 'command {} is not supported'.format(self.command)
-
+import requests
 
 def run_command(command, cmds, opts):
     '''Locate and call `command` handler in a map `cmds`. The handler is called
@@ -26,3 +17,12 @@ def run_command(command, cmds, opts):
         raise CommandNotSupportedError(command)
     else:
         handler(opts)
+
+
+class CommandNotSupportedError(Exception):
+    """Indicates that `command` is not supported"""
+    def __init__(self, command):
+        super().__init__(command)
+        self.command = command
+    def __str__(self):
+        return 'command {} is not supported'.format(self.command)
