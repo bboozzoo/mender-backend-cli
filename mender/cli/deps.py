@@ -24,7 +24,7 @@ import logging
 import requests
 
 from mender.cli.utils import run_command
-from mender.client import deployments_url, do_simple_get
+from mender.client import deployments_url, do_simple_get, simpleprinter
 
 
 def add_args(sub):
