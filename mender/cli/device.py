@@ -23,11 +23,11 @@ import logging
 import json
 from base64 import b64encode, b64decode
 
-import requests
-
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
+
+import requests
 
 from mender.cli.utils import run_command
 from mender.client import device_url, do_simple_get, errorprinter, jsonprinter
@@ -37,7 +37,7 @@ def add_args(sub):
     sub.set_defaults(devcommand='')
 
     sub.add_argument('-k', '--device-key', help='Device key path',
-                        default='key.priv')
+                     default='key.priv')
     sub.add_argument('-o', '--device-token', default='devtoken', help='Device token path')
 
     pupdate = pdev.add_parser('update', help='Get update')
@@ -149,7 +149,7 @@ def do_update(opts):
 
     url = device_url(opts.service, '/deployments/device/update')
     token = load_file(opts.device_token)
-    headers = headers={
+    headers = {
         'Authorization': 'Bearer {}'.format(token),
     }
     logging.debug('with headers: %s', headers)
