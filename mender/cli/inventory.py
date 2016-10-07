@@ -156,7 +156,7 @@ def device_attrs(opts):
 def devices_list(opts):
     def devlist_printer(rsp):
         devslist = rsp.json()
-        print ('devices:')
+        print('devices:')
         for dev in devslist:
             attrs = repack_attrs(dev.get('attributes'))
             print('  {} (type: {}, updated: {})'.format(dev['id'],
