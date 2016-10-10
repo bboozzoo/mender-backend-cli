@@ -33,6 +33,7 @@ def add_args(sub):
 
     pdev = pinvsub.add_parser('device', help='Device commands')
     pdev.set_defaults(invcommand='device')
+    pdev.set_defaults(invdevcommand='')
 
     pdevsub = pdev.add_subparsers(help='Device commands')
 
@@ -58,6 +59,7 @@ def add_args(sub):
 
     pgr = pinvsub.add_parser('group', help='Group commands')
     pgr.set_defaults(invcommand='group')
+    pgr.set_defaults(invgrcommand='')
 
     pgrsub = pgr.add_subparsers(help='Group commands')
 
