@@ -30,7 +30,8 @@ from Crypto.Hash import SHA256
 import requests
 
 from mender.cli.utils import run_command
-from mender.client import device_url, do_simple_get, errorprinter, jsonprinter
+from mender.client import device_url, do_simple_get, do_request, \
+    errorprinter, jsonprinter
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -42,6 +43,12 @@ def add_args(sub):
 
     pupdate = pdev.add_parser('update', help='Get update')
     pupdate.set_defaults(devcommand='update')
+
+    pdevattr = pdev.add_parser('inventory', help='Send device attributes')
+    pdevattr.add_argument('-s', '--attrs-set',
+                          help='Assign attributes, format <name>:<value>, specify multiple times',
+                          action='append', required=True)
+    pdevattr.set_defaults(devcommand='inventory')
 
     pauthorize = pdev.add_parser('authorize', help='Authorize')
     pauthorize.add_argument('-s', '--seq-no', default=1, help='Sequence number')
@@ -63,6 +70,7 @@ def do_main(opts):
         'key': do_key,
         'update': do_update,
         'token': do_token,
+        'inventory': do_inventory,
     }
     run_command(opts.devcommand, commands, opts)
 
@@ -136,6 +144,25 @@ def do_key(opts):
     logging.info('generating new key, writing to %s', opts.device_key)
     priv = gen_privkey()
     save_file(opts.device_key, priv)
+
+
+def do_inventory(opts):
+    url = device_url(opts.service, '/inventory/device/attributes')
+    token = load_file(opts.device_token)
+
+    # prepare attributes
+    attrs = []
+    for attr in opts.attrs_set:
+        n, v = attr.split(':')
+        attrs.append({'name': n, 'value': v})
+
+    headers = {
+        'Authorization': 'Bearer {}'.format(token),
+    }
+    logging.debug('with headers: %s', headers)
+    do_request(url, method='PATCH', json=attrs,
+               headers=headers, printer=None,
+               verify=opts.verify)
 
 
 def do_update(opts):
