@@ -50,13 +50,6 @@ def add_args(sub):
     pdevlist = pdevsub.add_parser('list', help='List devices')
     pdevlist.set_defaults(invdevcommand='list')
 
-    pdevattr = pdevsub.add_parser('attrs', help='Show/set device attributes')
-    pdevattr.add_argument('device', help='Device ID')
-    pdevattr.add_argument('-s', '--attrs-set',
-                          help='Assign attributes, format <name>:<value>, specify multiple times',
-                          action='append')
-    pdevattr.set_defaults(invdevcommand='attrs')
-
     pgr = pinvsub.add_parser('group', help='Group commands')
     pgr.set_defaults(invcommand='group')
     pgr.set_defaults(invgrcommand='')
@@ -83,7 +76,6 @@ def do_device(opts):
     commands = {
         'show': device_show,
         'group': device_group,
-        'attrs': device_attrs,
         'list': devices_list,
     }
     run_command(opts.invdevcommand, commands, opts)
@@ -141,18 +133,6 @@ def device_group(opts):
 
     do_request(url, method=method, success=204,
                json=group, verify=opts.verify)
-
-
-def device_attrs(opts):
-    url = inventory_url(opts.service, '/devices/{}/attributes'.format(opts.device))
-    if not opts.attrs_set:
-        do_simple_get(url, verify=opts.verify)
-    else:
-        attrs = []
-        for attr in opts.attrs_set:
-            n, v = attr.split(':')
-            attrs.append({'name': n, 'value': v})
-        do_request(url, method='PATCH', json=attrs, verify=opts.verify)
 
 
 def devices_list(opts):
