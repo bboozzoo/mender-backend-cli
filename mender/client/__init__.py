@@ -45,22 +45,8 @@ def admissions_url(host, path=''):
         return add_url_path(ap, path)
     return ap
 
-
 def deployments_url(host, path=''):
     ap = add_url_path(host, service_path('/deployments/deployments'))
-    if path:
-        return add_url_path(ap, path)
-    return ap
-
-def deployments_update_url(host, id, path=''):
-    ap = add_url_path(host, service_path('/deployments/device/deployments/%s/status' % id))
-    if path:
-        return add_url_path(ap, path)
-    return ap
-
-
-def deployments_log(host, id, path=''):
-    ap = add_url_path(host, service_path('/deployments/device/deployments/%s/log' % id))
     if path:
         return add_url_path(ap, path)
     return ap
@@ -126,7 +112,10 @@ def do_request(url, method='GET', printer=jsonprinter, success=200, **kwargs):
     if (isinstance(success, list) and rsp.status_code in success) \
        or rsp.status_code == success:
         if rsp.status_code != 204 and printer:
-            printer(rsp)
+            if len(rsp.content) > 1024 * 1024:
+                logging.info("response too big to print")
+            else:
+                printer(rsp)
     else:
         errorprinter(rsp)
     return rsp

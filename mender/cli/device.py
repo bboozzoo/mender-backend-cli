@@ -31,9 +31,9 @@ import requests
 import time
 import random
 
-from mender.cli.utils import run_command, download_image
+from mender.cli.utils import run_command
 from mender.client import device_url, do_simple_get, do_request, \
-    errorprinter, jsonprinter, deployments_update_url, deployments_log
+    errorprinter, jsonprinter
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -65,8 +65,10 @@ def add_args(sub):
     ptoken = pdev.add_parser('token', help='device token')
     ptoken.set_defaults(devcommand='token')
 
-    pfake_update = pdev.add_parser('fake-update', help='perform fake update')
-    pfake_update.add_argument('-f', '--fail', default='', help='Fail update message')
+    pfake_update = pdev.add_parser('fake-update', help='Perform fake upgrade by going through: update check - download - report loop')
+    pfake_update.add_argument('-f', '--fail', default='', help='Report update failure with this message')
+    pfake_update.add_argument('-w', '--wait', default=30, help='Maximum amount of time to wait between updating deployment status')
+    pfake_update.add_argument('-s', '--store', action='store_true', help='Store the image downloaded')
     pfake_update.set_defaults(devcommand='fake-update')
 
 def do_main(opts):
@@ -106,6 +108,18 @@ def sign(data, key):
     digest.update(data.encode())
     signed = signer.sign(digest)
     return b64encode(signed)
+
+def download_image(url, deployment_id, store=False, **kwargs):
+    rsp = do_simple_get(url, stream=True, **kwargs)
+    logging.debug('status %s', rsp.status_code)
+    if rsp.status_code == 200:
+        if store:
+            with open("upgrade-image-%s.dat" % deployment_id, 'wb') as f:
+                for chunk in rsp.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+    else:
+        logging.error('failed to download image from %s: %s', url, rsp.text)
 
 def do_authorize(opts):
     url = device_url(opts.service, '/authentication/auth_requests')
@@ -224,31 +238,30 @@ def do_fake_update(opts):
         if resp.status_code == 200:
             break
         else:
-            logging.info("No update availabe..")
+            logging.info("No update available..")
         time.sleep(5)
 
     deployment_id = resp.json()["id"]
     deployment_image_uri = resp.json()["image"]["uri"]
 
-    print ("Update: ", deployment_id, " available")
+    logging.info("Update: " + deployment_id + " available")
 
     token = load_file(opts.device_token)
-    url = deployments_update_url(opts.service, id=deployment_id)
-
+    url = device_url(opts.service, '/deployments/device/deployments/%s/status' % deployment_id)
     headers = {'Authorization': 'Bearer {}'.format(token)}
 
     do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "installing"})
-    download_image(deployment_image_uri)
+    download_image(deployment_image_uri, deployment_id=deployment_id, store=opts.store)
 
     do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "downloading"})
-    time.sleep(random.randint(0, 30))
+    time.sleep(random.randint(0, int(opts.wait)))
 
     do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "rebooting"})
-    time.sleep(random.randint(0, 30))
+    time.sleep(random.randint(0, int(opts.wait)))
 
     if opts.fail:
         do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "failure"})
-        url = deployments_log(opts.service, id=deployment_id)
+        url = device_url(opts.service, '/deployments/device/deployments/%s/log' % deployment_id)
         do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"messages": [{"level": "debug", "message": opts.fail, "timestamp": "2012-11-01T22:08:41+00:00"}]})
         return
 

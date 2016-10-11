@@ -20,13 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import requests
-from urllib.request import urlretrieve
-
-def download_image(uri, store=False):
-    if not store:
-        urlretrieve(uri, "/dev/null")
-    else:
-        urlretrieve(uri, "update-image.ext4")
 
 def run_command(command, cmds, opts):
     '''Locate and call `command` handler in a map `cmds`. The handler is called
