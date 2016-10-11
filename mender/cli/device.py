@@ -28,10 +28,12 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 
 import requests
+import time
+import random
 
-from mender.cli.utils import run_command
+from mender.cli.utils import run_command, download_image
 from mender.client import device_url, do_simple_get, do_request, \
-    errorprinter, jsonprinter
+    errorprinter, jsonprinter, deployments_update_url, deployments_log
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -63,6 +65,9 @@ def add_args(sub):
     ptoken = pdev.add_parser('token', help='device token')
     ptoken.set_defaults(devcommand='token')
 
+    pfake_update = pdev.add_parser('fake-update', help='perform fake update')
+    pfake_update.add_argument('-f', '--fail', default='', help='Fail update message')
+    pfake_update.set_defaults(devcommand='fake-update')
 
 def do_main(opts):
     commands = {
@@ -71,6 +76,7 @@ def do_main(opts):
         'update': do_update,
         'token': do_token,
         'inventory': do_inventory,
+        'fake-update': do_fake_update
     }
     run_command(opts.devcommand, commands, opts)
 
@@ -180,11 +186,10 @@ def do_update(opts):
         'Authorization': 'Bearer {}'.format(token),
     }
     logging.debug('with headers: %s', headers)
-    do_simple_get(url, printer=updateprinter,
-                  success=[200, 204],
-                  headers=headers,
-                  verify=opts.verify)
-
+    return do_simple_get(url, printer=updateprinter,
+                              success=[200, 204],
+                              headers=headers,
+                              verify=opts.verify)
 
 def pad_b64(b64s):
     pad = len(b64s) % 4
@@ -211,3 +216,40 @@ def do_token(opts):
         print('{}\n\t'.format(name), data)
 
     print('signature:\n\t', split[2])
+
+def do_fake_update(opts):
+    logging.info('fake update')
+    while True:
+        resp = do_update(opts)
+        if resp.status_code == 200:
+            break
+        else:
+            logging.info("No update availabe..")
+        time.sleep(5)
+
+    deployment_id = resp.json()["id"]
+    deployment_image_uri = resp.json()["image"]["uri"]
+
+    print ("Update: ", deployment_id, " available")
+
+    token = load_file(opts.device_token)
+    url = deployments_update_url(opts.service, id=deployment_id)
+
+    headers = {'Authorization': 'Bearer {}'.format(token)}
+
+    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "installing"})
+    download_image(deployment_image_uri)
+
+    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "downloading"})
+    time.sleep(random.randint(0, 30))
+
+    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "rebooting"})
+    time.sleep(random.randint(0, 30))
+
+    if opts.fail:
+        do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "failure"})
+        url = deployments_log(opts.service, id=deployment_id)
+        do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"messages": [{"level": "debug", "message": opts.fail, "timestamp": "2012-11-01T22:08:41+00:00"}]})
+        return
+
+    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "success"})
