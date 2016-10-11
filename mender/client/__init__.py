@@ -45,13 +45,11 @@ def admissions_url(host, path=''):
         return add_url_path(ap, path)
     return ap
 
-
 def deployments_url(host, path=''):
     ap = add_url_path(host, service_path('/deployments/deployments'))
     if path:
         return add_url_path(ap, path)
     return ap
-
 
 def images_url(host, path=''):
     ap = add_url_path(host, service_path('/deployments/images'))
@@ -95,12 +93,12 @@ def errorprinter(rsp):
     """Helper printer for error responses"""
     try:
         dec = json.loads(rsp.text)
-    except json.JSONDecodeError:
+    except ValueError:
         logging.debug('not a JSON response, got %s instead',
                       rsp.headers.get('Content-Type', 'Content-Type unset'))
         dec = rsp.text
     finally:
-        logging.warning('request failed: %s %s', rsp, dec)
+        logging.warning('request failed: %s %s', rsp, rsp.text)
 
 
 def do_simple_get(url, printer=jsonprinter, success=200, **kwargs):
@@ -114,7 +112,10 @@ def do_request(url, method='GET', printer=jsonprinter, success=200, **kwargs):
     if (isinstance(success, list) and rsp.status_code in success) \
        or rsp.status_code == success:
         if rsp.status_code != 204 and printer:
-            printer(rsp)
+            if len(rsp.content) > 1024 * 1024:
+                logging.info("response too big to print")
+            else:
+                printer(rsp)
     else:
         errorprinter(rsp)
     return rsp
