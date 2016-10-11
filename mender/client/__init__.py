@@ -107,12 +107,12 @@ def errorprinter(rsp):
     """Helper printer for error responses"""
     try:
         dec = json.loads(rsp.text)
-    except json.JSONDecodeError:
+    except ValueError:
         logging.debug('not a JSON response, got %s instead',
                       rsp.headers.get('Content-Type', 'Content-Type unset'))
         dec = rsp.text
     finally:
-        logging.warning('request failed: %s %s', rsp, dec)
+        logging.warning('request failed: %s %s', rsp, rsp.text)
 
 
 def do_simple_get(url, printer=jsonprinter, success=200, **kwargs):
