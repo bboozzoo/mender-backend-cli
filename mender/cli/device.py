@@ -156,8 +156,10 @@ def do_authorize(opts):
         logging.info('request successful')
         logging.info('token: %s', rsp.text)
         save_file(opts.device_token, rsp.text)
+        return True
     else:
         logging.warning('request failed: %s %s', rsp, rsp.text)
+        return False
 
 
 def do_key(opts):
