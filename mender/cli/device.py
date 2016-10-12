@@ -176,7 +176,7 @@ def do_inventory(opts):
     attrs = []
     for attr in opts.attrs_set:
         n, v = attr.split(':')
-        attrs.append({'name': n, 'value': v})
+        attrs.append({'name': n.strip(), 'value': v.strip()})
 
     headers = {
         'Authorization': 'Bearer {}'.format(token),
