@@ -22,7 +22,7 @@
 import logging
 import argparse
 
-from mender.cli import deps, devadm, device, images, inventory
+from mender.cli import deps, devadm, device, images, inventory, client
 from mender.cli.utils import run_command, CommandNotSupportedError
 from mender.client import ClientError
 
@@ -58,6 +58,10 @@ def parse_arguments():
     device.add_args(pdev)
     pdev.set_defaults(command='device')
 
+    pclient = sub.add_parser('client', help='Simulate a mender client')
+    client.add_args(pclient)
+    pclient.set_defaults(command='client')
+
     return parser.parse_args()
 
 
@@ -82,11 +86,10 @@ def main():
             'device': device.do_main,
             'image': images.do_main,
             'inventory': inventory.do_main,
+            'client':  client.do_main,
         }
         run_command(opts.command, commands, opts)
     except ClientError as rerr:
         logging.error('request failed: %s', rerr)
     except CommandNotSupportedError:
         logging.error('incomplete or unsupported command, see --help')
-
-
