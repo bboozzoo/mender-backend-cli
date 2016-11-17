@@ -30,6 +30,8 @@ from Crypto.Hash import SHA256
 import requests
 import time
 import random
+import tempfile
+import os
 
 from mender.cli.utils import run_command
 from mender.client import device_url, do_simple_get, do_request, \
@@ -114,7 +116,7 @@ def download_image(url, deployment_id, store=False, **kwargs):
     logging.debug('status %s', rsp.status_code)
     if rsp.status_code == 200:
         if store:
-            with open("upgrade-image-%s.dat" % deployment_id, 'wb') as f:
+            with tempfile.NamedTemporaryFile(prefix=deployment_id[0:8], dir=os.getcwd()) as f:
                 for chunk in rsp.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)
