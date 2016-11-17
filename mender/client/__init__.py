@@ -108,7 +108,7 @@ def do_simple_get(url, printer=jsonprinter, success=200, **kwargs):
                       printer=printer, success=success, **kwargs)
 
 
-def do_request(url, method='GET', printer=jsonprinter, success=200, **kwargs):
+def do_request(url, method='GET', printer=jsonprinter, success=[200, 204], **kwargs):
     rsp = requests.request(method, url, **kwargs)
     logging.debug(rsp)
     if (isinstance(success, list) and rsp.status_code in success) \
