@@ -80,8 +80,10 @@ def jsonprinter(rsp):
     from pprint import pprint
     if not isinstance(rsp, requests.Response):
         raise TypeError("expected requests.Response")
-    pprint(rsp.json())
-
+    try:
+        pprint(rsp.json())
+    except ValueError:
+        logging.error("Failed to pprint response, content was not JSON")
 
 def simpleprinter(rsp):
     """Printer for text type responses"""
