@@ -53,9 +53,6 @@ def add_args(sub):
     piadd.set_defaults(imcommand='add')
     piadd.add_argument('-n', '--name', help='Image name', required=True)
     piadd.add_argument('-e', '--description', help='Image description', required=True)
-    piadd.add_argument('-t', '--device-type', help='Device type', required=True)
-    piadd.add_argument('-c', '--checksum', help='Image checksum', required=True)
-    piadd.add_argument('-y', '--yocto-id', help='Yocto image name', required=True)
     piadd.add_argument('infile', help='Image file')
 
     piartifactadd = pisub.add_parser('add-artifact', help='Add image artifact and upload its contents')
@@ -85,9 +82,6 @@ def do_images_add(opts):
     image = {
         'name': opts.name,
         'description': opts.description,
-        'device_type': opts.device_type,
-        'yocto_id': opts.yocto_id,
-        'checksum': opts.checksum,
     }
     # build contents of multipart/form-data, image meta must come first, hence
     # we use an OrderedDict to preserve the order
