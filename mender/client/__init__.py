@@ -23,6 +23,8 @@ import logging
 import json
 
 import requests
+from requests import Session as ApiClient
+
 
 API_URL = '/api/integrations/0.1/'
 API_DEVICES_URL = '/api/devices/0.1/'
