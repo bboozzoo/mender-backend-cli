@@ -67,10 +67,14 @@ def add_args(sub):
     ptoken = pdev.add_parser('token', help='device token')
     ptoken.set_defaults(devcommand='token')
 
-    pfake_update = pdev.add_parser('fake-update', help='Perform fake upgrade by going through: update check - download - report loop')
-    pfake_update.add_argument('-f', '--fail', default='', help='Report update failure with this message')
-    pfake_update.add_argument('-w', '--wait', default=30, help='Maximum amount of time to wait between updating deployment status')
-    pfake_update.add_argument('-s', '--store', action='store_true', help='Store the image downloaded')
+    pfake_update = pdev.add_parser('fake-update',
+                                   help='Perform fake upgrade by going through: update check - download - report loop')
+    pfake_update.add_argument('-f', '--fail', default='',
+                              help='Report update failure with this message')
+    pfake_update.add_argument('-w', '--wait', default=30,
+                              help='Maximum amount of time to wait between updating deployment status')
+    pfake_update.add_argument('-s', '--store', action='store_true',
+                              help='Store the image downloaded')
     pfake_update.set_defaults(devcommand='fake-update')
 
 def do_main(opts):
@@ -238,12 +242,14 @@ def do_fake_update(opts):
 
     logging.info("Update: " + deployment_id + " available")
 
-    url = device_url(opts.service, '/deployments/device/deployments/%s/status' % deployment_id)
+    url = device_url(opts.service,
+                     '/deployments/device/deployments/%s/status' % deployment_id)
 
     with device_api_from_opts(opts) as api:
         do_request(api, url, method='PUT', json={"status": "installing"})
 
-        download_image(deployment_image_uri, deployment_id=deployment_id, store=opts.store)
+        download_image(deployment_image_uri,
+                       deployment_id=deployment_id, store=opts.store)
 
         do_request(api, url, method='PUT', json={"status": "downloading"})
         time.sleep(random.randint(0, int(opts.wait)))
@@ -253,7 +259,8 @@ def do_fake_update(opts):
 
         if opts.fail:
             do_request(api, url, method='PUT', json={"status": "failure"})
-            logsurl = device_url(opts.service, '/deployments/device/deployments/%s/log' % deployment_id)
+            logsurl = device_url(opts.service,
+                                 '/deployments/device/deployments/%s/log' % deployment_id)
             do_request(api, logsurl, method='PUT',
                        json={
                            "messages": [
