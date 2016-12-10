@@ -21,6 +21,9 @@
 # SOFTWARE.
 import requests
 
+from mender.client import ApiClient
+
+
 def run_command(command, cmds, opts):
     '''Locate and call `command` handler in a map `cmds`. The handler is called
     with `opts` as its first argument.
@@ -47,3 +50,10 @@ class CommandNotSupportedError(Exception):
         self.command = command
     def __str__(self):
         return 'command {} is not supported'.format(self.command)
+
+
+def api_from_opts(opts):
+    api = ApiClient()
+    if opts.no_verify:
+        api.verify = False
+    return api
