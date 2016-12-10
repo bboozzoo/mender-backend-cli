@@ -35,6 +35,8 @@ def parse_arguments():
                         default='https://docker.mender.io:8080/')
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
+    parser.add_argument('--cacert', help='Server certificate for verification',
+                        default='')
     parser.set_defaults(command='')
     sub = parser.add_subparsers(help='Commands')
 

@@ -56,4 +56,6 @@ def api_from_opts(opts):
     api = ApiClient()
     if opts.no_verify:
         api.verify = False
+    if opts.cacert:
+        api.verify = opts.cacert
     return api
