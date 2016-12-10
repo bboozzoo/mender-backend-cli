@@ -196,7 +196,7 @@ def do_update(opts):
         else:
             errorprinter(rsp)
 
-    url = device_url(opts.service, '/deployments/device/update')
+    url = device_url(opts.service, '/deployments/device/deployments/next')
     with device_api_from_opts(opts) as api:
         return do_simple_get(api, url, printer=updateprinter,
                              success=[200, 204])
