@@ -23,8 +23,9 @@ import logging
 
 import requests
 
-from mender.cli.utils import run_command
-from mender.client import inventory_url, do_simple_get, do_request, errorprinter
+from mender.cli.utils import run_command, api_from_opts, do_simple_get, \
+    do_request, errorprinter
+from mender.client import inventory_url
 
 
 def add_args(sub):
@@ -117,7 +118,8 @@ def device_show(opts):
 def device_group(opts):
     url = inventory_url(opts.service, '/devices/{}/group'.format(opts.device))
     if not opts.group_set and not opts.group_delete:
-        do_simple_get(url, verify=opts.verify)
+        with api_from_opts(opts) as api:
+            do_simple_get(api, url)
     elif opts.group_set:
         group = {
             'group': opts.group_set,
@@ -131,8 +133,9 @@ def device_group(opts):
         }
         method = 'DELETE'
 
-    do_request(url, method=method, success=204,
-               json=group, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_request(api, url, method=method, success=204,
+                   json=group)
 
 
 def devices_list(opts):
@@ -146,14 +149,17 @@ def devices_list(opts):
                                                         dev['updated_ts']))
 
     url = inventory_url(opts.service, '/devices')
-    do_simple_get(url, printer=devlist_printer, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url, printer=devlist_printer)
 
 
 def group_list(opts):
     url = inventory_url(opts.service, 'groups')
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def group_show(opts):
     url = inventory_url(opts.service, 'groups/{}/devices'.format(opts.group))
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)

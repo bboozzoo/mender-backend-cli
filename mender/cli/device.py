@@ -33,9 +33,9 @@ from Crypto.Hash import SHA256
 
 import requests
 
-from mender.cli.utils import run_command
-from mender.client import device_url, do_simple_get, do_request, \
+from mender.cli.utils import run_command, api_from_opts, do_simple_get, do_request, \
     errorprinter, jsonprinter
+from mender.client import device_url
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -149,19 +149,19 @@ def do_authorize(opts):
         'X-MEN-Signature': signature,
         'Content-Type': 'application/json'
     }
-    rsp = requests.post(url,
-                        data=data,
-                        headers=hdrs,
-                        verify=opts.verify)
+    with api_from_opts(opts) as api:
+        rsp = api.post(url,
+                       data=data,
+                       headers=hdrs)
 
-    if rsp.status_code == 200:
-        logging.info('request successful')
-        logging.info('token: %s', rsp.text)
-        save_file(opts.device_token, rsp.text)
-        return True
-    else:
-        logging.warning('request failed: %s %s', rsp, rsp.text)
-        return False
+        if rsp.status_code == 200:
+            logging.info('request successful')
+            logging.info('token: %s', rsp.text)
+            save_file(opts.device_token, rsp.text)
+            return True
+        else:
+            logging.warning('request failed: %s %s', rsp, rsp.text)
+    return False
 
 
 def do_key(opts):
@@ -184,9 +184,9 @@ def do_inventory(opts):
         'Authorization': 'Bearer {}'.format(token),
     }
     logging.debug('with headers: %s', headers)
-    do_request(url, method='PATCH', json=attrs,
-               headers=headers, printer=None,
-               verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_request(api, url, method='PATCH', json=attrs,
+                   headers=headers)
 
 
 def do_update(opts):
@@ -204,10 +204,10 @@ def do_update(opts):
         'Authorization': 'Bearer {}'.format(token),
     }
     logging.debug('with headers: %s', headers)
-    return do_simple_get(url, printer=updateprinter,
-                              success=[200, 204],
-                              headers=headers,
-                              verify=opts.verify)
+    with api_from_opts(opts) as api:
+        return do_simple_get(api, url, printer=updateprinter,
+                             success=[200, 204],
+                             headers=headers)
 
 def pad_b64(b64s):
     pad = len(b64s) % 4
@@ -254,19 +254,31 @@ def do_fake_update(opts):
     url = device_url(opts.service, '/deployments/device/deployments/%s/status' % deployment_id)
     headers = {'Authorization': 'Bearer {}'.format(token)}
 
-    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "installing"})
-    download_image(deployment_image_uri, deployment_id=deployment_id, store=opts.store)
+    with api_from_opts(opts) as api:
+        do_request(api, url, method='PUT', headers=headers, json={"status": "installing"})
 
-    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "downloading"})
-    time.sleep(random.randint(0, int(opts.wait)))
+        download_image(deployment_image_uri, deployment_id=deployment_id, store=opts.store)
 
-    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "rebooting"})
-    time.sleep(random.randint(0, int(opts.wait)))
+        do_request(api, url, method='PUT', headers=headers, json={"status": "downloading"})
+        time.sleep(random.randint(0, int(opts.wait)))
 
-    if opts.fail:
-        do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "failure"})
-        url = device_url(opts.service, '/deployments/device/deployments/%s/log' % deployment_id)
-        do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"messages": [{"level": "debug", "message": opts.fail, "timestamp": "2012-11-01T22:08:41+00:00"}]})
-        return
+        do_request(api, url, method='PUT', headers=headers, json={"status": "rebooting"})
+        time.sleep(random.randint(0, int(opts.wait)))
 
-    do_request(url, method='PUT', verify=opts.verify, headers=headers, json={"status": "success"})
+        if opts.fail:
+            do_request(api, url, method='PUT', headers=headers, json={"status": "failure"})
+            logsurl = device_url(opts.service, '/deployments/device/deployments/%s/log' % deployment_id)
+            do_request(api, logsurl, method='PUT',
+                       headers=headers,
+                       json={
+                           "messages": [
+                               {
+                                   "level": "debug",
+                                   "message": opts.fail,
+                                   "timestamp": "2012-11-01T22:08:41+00:00"
+                               }
+                           ]
+                       })
+        else:
+            do_request(api, url, method='PUT',
+                       headers=headers, json={"status": "success"})

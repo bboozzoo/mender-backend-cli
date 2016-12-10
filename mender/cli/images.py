@@ -25,8 +25,8 @@ from collections import OrderedDict
 
 import requests
 
-from mender.cli.utils import run_command
-from mender.client import images_url, do_simple_get
+from mender.cli.utils import run_command, do_simple_get, api_from_opts
+from mender.client import images_url
 
 
 def add_args(sub):
@@ -91,14 +91,15 @@ def do_images_add(opts):
     # followed by firmware data
     files['firmware'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
 
-    rsp = requests.post(url, files=files, verify=opts.verify)
-    if rsp.status_code == 201:
-        # created
-        location = rsp.headers.get('Location', '')
-        print("created with URL: {}".format(location))
-        print('image ID: ', location.rsplit('/')[-1])
-    else:
-        logging.warning('request failed: %s %s', rsp, rsp.json())
+    with api_from_opts(opts) as api:
+        rsp = api.post(url, files=files)
+        if rsp.status_code == 201:
+            # created
+            location = rsp.headers.get('Location', '')
+            print("created with URL: {}".format(location))
+            print('image ID: ', location.rsplit('/')[-1])
+        else:
+            logging.warning('request failed: %s %s', rsp, rsp.json())
 
 
 def do_images_artifact_add(opts):
@@ -116,30 +117,34 @@ def do_images_artifact_add(opts):
     # followed by firmware data
     files['firmware'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
 
-    rsp = requests.post(url, files=files, verify=opts.verify)
-    if rsp.status_code == 201:
-        # created
-        location = rsp.headers.get('Location', '')
-        print("created with URL: {}".format(location))
-        print('image ID: ', location.rsplit('/')[-1])
-    else:
-        logging.warning('request failed: %s %s', rsp, rsp.json())
+    with api_from_opts(opts) as api:
+        rsp = api.post(url, files=files)
+        if rsp.status_code == 201:
+            # created
+            location = rsp.headers.get('Location', '')
+            print("created with URL: {}".format(location))
+            print('image ID: ', location.rsplit('/')[-1])
+        else:
+            logging.warning('request failed: %s %s', rsp, rsp.json())
 
 
 def do_images_download(opts):
     logging.debug('get image %s download', opts.id)
     url = images_url(opts.service, '/{}/download'.format(opts.id))
 
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def do_images_show(opts):
     logging.debug('get image %s download', opts.id)
     url = images_url(opts.service, opts.id)
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def do_images_list(opts):
     logging.debug('list images')
     url = images_url(opts.service)
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)

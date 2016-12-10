@@ -23,8 +23,8 @@ import logging
 
 import requests
 
-from mender.cli.utils import run_command
-from mender.client import admissions_url, do_request, do_simple_get
+from mender.cli.utils import run_command, api_from_opts, do_request, do_simple_get
+from mender.client import admissions_url
 
 
 def add_args(sub):
@@ -72,24 +72,24 @@ def dump_device(data, showkey=True):
 
 def show_device(opts):
     url = admissions_url(opts.service, '/{}'.format(opts.device))
-    rsp = do_simple_get(url,
-                        printer=lambda rsp: dump_device(rsp.json()),
-                        verify=opts.verify)
+    with api_from_opts(opts) as api:
+        rsp = do_simple_get(api, url,
+                            printer=lambda rsp: dump_device(rsp.json()))
 
 
 def list_devices(opts):
-    do_simple_get(admissions_url(opts.service),
-                  printer=lambda rsp: [dump_device(dev,
-                                                   showkey=False)
-                                       for dev in rsp.json()],
-                  verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, admissions_url(opts.service),
+                      printer=lambda rsp: [dump_device(dev,
+                                                       showkey=False)
+                                           for dev in rsp.json()])
 
 
 def set_device_status(opts, status):
     url = admissions_url(opts.service, '/{}/status'.format(opts.device))
     logging.debug('device URL: %s', url)
-    do_request(url, method='PUT',
-               verify=opts.verify,
-               json={
-                   'status': status
-               })
+    with api_from_opts(opts) as api:
+        do_request(api, url, method='PUT',
+                   json={
+                       'status': status
+                   })

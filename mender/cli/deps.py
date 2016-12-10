@@ -23,8 +23,8 @@ import logging
 
 import requests
 
-from mender.cli.utils import run_command
-from mender.client import deployments_url, do_simple_get, simpleprinter
+from mender.cli.utils import api_from_opts, run_command, do_simple_get, simpleprinter
+from mender.client import deployments_url
 
 
 def add_args(sub):
@@ -81,50 +81,54 @@ def do_main(opts):
 def do_deployments_find(opts):
     logging.debug('lookup deployment %s', opts.name)
     url = deployments_url(opts.service)
-    do_simple_get(url, params={'name': opts.name},
-                  verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url, params={'name': opts.name})
 
 
 def do_deployments_add(opts):
     logging.debug('lookup deployment %s', opts.name)
     url = deployments_url(opts.service)
-    rsp = requests.post(url,
-                        json={
-                            'name': opts.name,
-                            'artifact_name': opts.artifact_name,
-                            'devices': opts.device,
-                        },
-                        verify=opts.verify)
-    if rsp.status_code == 201:
-        # created
-        location = rsp.headers.get('Location', '')
-        print("created with URL: {}".format(location))
-        print('deployment ID: ', location.rsplit('/')[-1])
-    else:
-        logging.warning('request failed: %s %s', rsp, rsp.json())
+    with api_from_opts(opts) as api:
+        rsp = api.post(url,
+                       json={
+                           'name': opts.name,
+                           'artifact_name': opts.artifact_name,
+                           'devices': opts.device,
+                       })
+        if rsp.status_code == 201:
+            # created
+            location = rsp.headers.get('Location', '')
+            print("created with URL: {}".format(location))
+            print('deployment ID: ', location.rsplit('/')[-1])
+        else:
+            logging.warning('request failed: %s %s', rsp, rsp.json())
 
 
 def do_deployments_status(opts):
     logging.debug('get deployment %s', opts.id)
     url = deployments_url(opts.service, opts.id)
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def do_deployments_stats(opts):
     logging.debug('get deployment %s stats', opts.id)
     url = deployments_url(opts.service, '{}/statistics'.format(opts.id))
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def do_deployments_devices(opts):
     logging.debug('get deployment %s devices', opts.id)
     url = deployments_url(opts.service,
                           '{}/devices'.format(opts.id))
-    do_simple_get(url, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url)
 
 
 def do_deployments_logs(opts):
     logging.debug('get log for deployment %s on device %s', opts.id, opts.devid)
     url = deployments_url(opts.service,
                           '{}/devices/{}/log'.format(opts.id, opts.devid))
-    do_simple_get(url, printer=simpleprinter, verify=opts.verify)
+    with api_from_opts(opts) as api:
+        do_simple_get(api, url, printer=simpleprinter)
