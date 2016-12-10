@@ -35,7 +35,7 @@ import requests
 
 from mender.cli.utils import run_command, api_from_opts, do_simple_get, do_request, \
     errorprinter, jsonprinter
-from mender.client import device_url
+from mender.client import device_url, DeviceTokenAuth
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -172,7 +172,6 @@ def do_key(opts):
 
 def do_inventory(opts):
     url = device_url(opts.service, '/inventory/device/attributes')
-    token = load_file(opts.device_token)
 
     # prepare attributes
     attrs = []
@@ -180,13 +179,8 @@ def do_inventory(opts):
         n, v = attr.split(':')
         attrs.append({'name': n.strip(), 'value': v.strip()})
 
-    headers = {
-        'Authorization': 'Bearer {}'.format(token),
-    }
-    logging.debug('with headers: %s', headers)
-    with api_from_opts(opts) as api:
-        do_request(api, url, method='PATCH', json=attrs,
-                   headers=headers)
+    with device_api_from_opts(opts) as api:
+        do_request(api, url, method='PATCH', json=attrs)
 
 
 def do_update(opts):
@@ -199,15 +193,9 @@ def do_update(opts):
             errorprinter(rsp)
 
     url = device_url(opts.service, '/deployments/device/update')
-    token = load_file(opts.device_token)
-    headers = {
-        'Authorization': 'Bearer {}'.format(token),
-    }
-    logging.debug('with headers: %s', headers)
-    with api_from_opts(opts) as api:
+    with device_api_from_opts(opts) as api:
         return do_simple_get(api, url, printer=updateprinter,
-                             success=[200, 204],
-                             headers=headers)
+                             success=[200, 204])
 
 def pad_b64(b64s):
     pad = len(b64s) % 4
@@ -250,26 +238,23 @@ def do_fake_update(opts):
 
     logging.info("Update: " + deployment_id + " available")
 
-    token = load_file(opts.device_token)
     url = device_url(opts.service, '/deployments/device/deployments/%s/status' % deployment_id)
-    headers = {'Authorization': 'Bearer {}'.format(token)}
 
-    with api_from_opts(opts) as api:
-        do_request(api, url, method='PUT', headers=headers, json={"status": "installing"})
+    with device_api_from_opts(opts) as api:
+        do_request(api, url, method='PUT', json={"status": "installing"})
 
         download_image(deployment_image_uri, deployment_id=deployment_id, store=opts.store)
 
-        do_request(api, url, method='PUT', headers=headers, json={"status": "downloading"})
+        do_request(api, url, method='PUT', json={"status": "downloading"})
         time.sleep(random.randint(0, int(opts.wait)))
 
-        do_request(api, url, method='PUT', headers=headers, json={"status": "rebooting"})
+        do_request(api, url, method='PUT', json={"status": "rebooting"})
         time.sleep(random.randint(0, int(opts.wait)))
 
         if opts.fail:
-            do_request(api, url, method='PUT', headers=headers, json={"status": "failure"})
+            do_request(api, url, method='PUT', json={"status": "failure"})
             logsurl = device_url(opts.service, '/deployments/device/deployments/%s/log' % deployment_id)
             do_request(api, logsurl, method='PUT',
-                       headers=headers,
                        json={
                            "messages": [
                                {
@@ -281,4 +266,14 @@ def do_fake_update(opts):
                        })
         else:
             do_request(api, url, method='PUT',
-                       headers=headers, json={"status": "success"})
+                       json={"status": "success"})
+
+
+def device_api_from_opts(opts):
+    api = api_from_opts(opts)
+
+    if os.path.exists(opts.device_token):
+        token = load_file(opts.device_token)
+        api.auth = DeviceTokenAuth(token)
+
+    return api
