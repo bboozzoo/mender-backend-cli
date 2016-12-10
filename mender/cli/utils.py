@@ -19,6 +19,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import logging
+import json
+
 import requests
 
 from mender.client import ApiClient
@@ -59,3 +62,52 @@ def api_from_opts(opts):
     if opts.cacert:
         api.verify = opts.cacert
     return api
+
+def jsonprinter(rsp):
+    """Printer for JSON type responses"""
+    from pprint import pprint
+    if not isinstance(rsp, requests.Response):
+        raise TypeError("expected requests.Response")
+    try:
+        pprint(rsp.json())
+    except ValueError:
+        logging.error("Failed to pprint response, content was not JSON")
+
+
+def simpleprinter(rsp):
+    """Printer for text type responses"""
+    if not isinstance(rsp, requests.Response):
+        raise TypeError("expected requests.Response")
+    print(rsp.text)
+
+
+def errorprinter(rsp):
+    """Helper printer for error responses"""
+    try:
+        dec = json.loads(rsp.text)
+    except ValueError:
+        logging.debug('not a JSON response, got %s instead',
+                      rsp.headers.get('Content-Type', 'Content-Type unset'))
+        dec = rsp.text
+    finally:
+        logging.warning('request failed: %s %s', rsp, rsp.text)
+
+
+def do_simple_get(api, url, printer=jsonprinter, success=200, **kwargs):
+    return do_request(api, url, method='GET',
+                      printer=printer, success=success, **kwargs)
+
+
+def do_request(api, url, method='GET', printer=jsonprinter, success=[200, 204], **kwargs):
+    rsp = api.request(method, url, **kwargs)
+    logging.debug(rsp)
+    if (isinstance(success, list) and rsp.status_code in success) \
+       or rsp.status_code == success:
+        if rsp.status_code != 204 and printer:
+            if len(rsp.content) > 1024 * 1024:
+                logging.info("response too big to print")
+            else:
+                printer(rsp)
+    else:
+        errorprinter(rsp)
+    return rsp
