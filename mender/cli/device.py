@@ -21,6 +21,10 @@
 # SOFTWARE.
 import logging
 import json
+import time
+import random
+import tempfile
+import os
 from base64 import b64encode, b64decode
 
 from Crypto.PublicKey import RSA
@@ -28,10 +32,6 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 
 import requests
-import time
-import random
-import tempfile
-import os
 
 from mender.cli.utils import run_command
 from mender.client import device_url, do_simple_get, do_request, \
