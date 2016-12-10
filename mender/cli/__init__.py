@@ -37,6 +37,8 @@ def parse_arguments():
                         default=False, action='store_true')
     parser.add_argument('--cacert', help='Server certificate for verification',
                         default='')
+    parser.add_argument('-u', '--user', help='Login')
+    parser.add_argument('-p', '--password', help='Password')
     parser.set_defaults(command='')
     sub = parser.add_subparsers(help='Commands')
 

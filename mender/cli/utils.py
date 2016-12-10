@@ -61,6 +61,8 @@ def api_from_opts(opts):
         api.verify = False
     if opts.cacert:
         api.verify = opts.cacert
+    if opts.user and opts.password:
+        api.auth = (opts.user, opts.password)
     return api
 
 def jsonprinter(rsp):
