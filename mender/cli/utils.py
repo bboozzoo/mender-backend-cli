@@ -74,6 +74,7 @@ def jsonprinter(rsp):
         pprint(rsp.json())
     except ValueError:
         logging.error("Failed to pprint response, content was not JSON")
+        logging.error("response text: %s", rsp.text)
 
 
 def simpleprinter(rsp):
