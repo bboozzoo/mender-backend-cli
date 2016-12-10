@@ -22,6 +22,7 @@
 import logging
 
 import requests
+import requests.auth
 from requests import Session as ApiClient
 
 
@@ -76,3 +77,11 @@ class ClientError(requests.exceptions.RequestException):
     pass
 
 
+class DeviceTokenAuth(requests.auth.AuthBase):
+    """Perform device authentication using device token"""
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = 'Bearer {}'.format(self.token)
+        return r
