@@ -22,7 +22,7 @@
 import logging
 import argparse
 
-from mender.cli import deps, devadm, device, images, inventory, client
+from mender.cli import deps, devadm, device, images, inventory, client, user
 from mender.cli.utils import run_command, CommandNotSupportedError
 from mender.client import ClientError
 
@@ -58,6 +58,10 @@ def parse_arguments():
     inventory.add_args(pinv)
     pinv.set_defaults(command='inventory')
 
+    puse = sub.add_parser('user', help='User commands')
+    user.add_args(puse)
+    puse.set_defaults(command='user')
+
     pdev = sub.add_parser('device', help='Device')
     device.add_args(pdev)
     pdev.set_defaults(command='device')
@@ -91,6 +95,7 @@ def main():
             'image': images.do_main,
             'inventory': inventory.do_main,
             'client':  client.do_main,
+            'user':  user.do_main,
         }
         run_command(opts.command, commands, opts)
     except ClientError as rerr:
