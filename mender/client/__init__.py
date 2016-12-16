@@ -77,7 +77,7 @@ class ClientError(requests.exceptions.RequestException):
     pass
 
 
-class DeviceTokenAuth(requests.auth.AuthBase):
+class JWTAuth(requests.auth.AuthBase):
     """Perform device authentication using device token"""
     def __init__(self, token):
         self.token = token

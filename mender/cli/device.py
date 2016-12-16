@@ -34,8 +34,9 @@ from Crypto.Hash import SHA256
 import requests
 
 from mender.cli.utils import run_command, api_from_opts, do_simple_get, do_request, \
-    errorprinter, jsonprinter
-from mender.client import device_url, DeviceTokenAuth
+    errorprinter, jsonprinter, dump_token, load_file, save_file
+from mender.client import device_url, JWTAuth
+
 
 def add_args(sub):
     pdev = sub.add_subparsers(help='Commands for device')
@@ -281,6 +282,6 @@ def device_api_from_opts(opts):
 
     if os.path.exists(opts.device_token):
         token = load_file(opts.device_token)
-        api.auth = DeviceTokenAuth(token)
+        api.auth = JWTAuth(token)
 
     return api
