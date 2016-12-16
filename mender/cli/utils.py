@@ -21,10 +21,12 @@
 # SOFTWARE.
 import logging
 import json
+import os.path
 from base64 import b64decode
 
 import requests
 
+from mender.client import ApiClient, JWTAuth
 
 
 def run_command(command, cmds, opts):
@@ -61,8 +63,10 @@ def api_from_opts(opts):
         api.verify = False
     if opts.cacert:
         api.verify = opts.cacert
-    if opts.user and opts.password:
-        api.auth = (opts.user, opts.password)
+    if opts.user_token and os.path.exists(opts.user_token):
+        logging.info('loading user token from %s', opts.user_token)
+        token = load_file(opts.user_token)
+        api.auth = JWTAuth(token)
     return api
 
 def jsonprinter(rsp):
