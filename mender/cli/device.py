@@ -25,7 +25,7 @@ import time
 import random
 import tempfile
 import os
-from base64 import b64encode, b64decode
+from base64 import b64encode
 
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
@@ -88,18 +88,6 @@ def do_main(opts):
         'fake-update': do_fake_update
     }
     run_command(opts.devcommand, commands, opts)
-
-def load_file(path):
-    with open(path) as inf:
-        data = inf.read()
-    return data
-
-def save_file(path, data):
-    with open(path, 'wb') as outf:
-        if isinstance(data, bytes):
-            outf.write(data)
-        else:
-            outf.write(data.encode())
 
 def gen_privkey():
     private = RSA.generate(1024)
@@ -202,12 +190,6 @@ def do_update(opts):
         return do_simple_get(api, url, printer=updateprinter,
                              success=[200, 204])
 
-def pad_b64(b64s):
-    pad = len(b64s) % 4
-    if pad != 0:
-        return b64s + '=' * pad
-    return b64s
-
 def do_token(opts):
     logging.info('show token')
     try:
@@ -216,17 +198,8 @@ def do_token(opts):
         logging.error('failed to load token from %s: %s',
                       opts.device_token, err)
         return
+    dump_token(tok)
 
-    split = tok.split('.')
-    for name, val in zip(['type', 'claims'], split[0:2]):
-        pad = pad_b64(val)
-        logging.debug('padded: %s', pad)
-        raw = b64decode(pad)
-        # logging.info('%s: %s', n, raw)
-        data = json.loads(str(raw, 'utf-8'))
-        print('{}\n\t'.format(name), data)
-
-    print('signature:\n\t', split[2])
 
 def do_fake_update(opts):
     logging.info('fake update')

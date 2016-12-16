@@ -21,10 +21,10 @@
 # SOFTWARE.
 import logging
 import json
+from base64 import b64decode
 
 import requests
 
-from mender.client import ApiClient
 
 
 def run_command(command, cmds, opts):
@@ -114,3 +114,40 @@ def do_request(api, url, method='GET', printer=jsonprinter, success=[200, 204], 
     else:
         errorprinter(rsp)
     return rsp
+
+
+def pad_b64(b64s):
+    """Pad Base64 encoded string so that its length is a multiple of 4 bytes"""
+    pad = len(b64s) % 4
+    if pad != 0:
+        return b64s + '=' * pad
+    return b64s
+
+
+def dump_token(tok):
+    split = tok.split('.')
+    for name, val in zip(['type', 'claims'], split[0:2]):
+        pad = pad_b64(val)
+        logging.debug('padded: %s', pad)
+        raw = b64decode(pad)
+        # logging.info('%s: %s', n, raw)
+        data = json.loads(str(raw, 'utf-8'))
+        print('{}\n\t'.format(name), data)
+
+    print('signature:\n\t', split[2])
+
+
+def load_file(path):
+    """Load contents of a file"""
+    with open(path) as inf:
+        data = inf.read()
+    return data
+
+
+def save_file(path, data):
+    """Save data to file"""
+    with open(path, 'wb') as outf:
+        if isinstance(data, bytes):
+            outf.write(data)
+        else:
+            outf.write(data.encode())
