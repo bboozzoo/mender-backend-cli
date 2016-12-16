@@ -72,6 +72,13 @@ def device_url(host, path=''):
     return ap
 
 
+def user_url(host, path=''):
+    ap = add_url_path(host, service_path('/useradm'))
+    if path:
+        return add_url_path(ap, path)
+    return ap
+
+
 class ClientError(requests.exceptions.RequestException):
     """Wrapper for client errors"""
     pass
