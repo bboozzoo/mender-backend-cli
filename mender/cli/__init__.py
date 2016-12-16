@@ -22,7 +22,7 @@
 import logging
 import argparse
 
-from mender.cli import deps, devadm, device, images, inventory, client, user
+from mender.cli import deps, devadm, device, artifacts, inventory, client, user
 from mender.cli.utils import run_command, CommandNotSupportedError
 from mender.client import ClientError
 
@@ -46,9 +46,9 @@ def parse_arguments():
     deps.add_args(pdeps)
     pdeps.set_defaults(command='deployment')
 
-    pim = sub.add_parser('image', help='Images')
-    images.add_args(pim)
-    pim.set_defaults(command='image')
+    pim = sub.add_parser('artifact', help='Artifacts')
+    artifacts.add_args(pim)
+    pim.set_defaults(command='artifact')
 
     padm = sub.add_parser('admission', help='Admission')
     devadm.add_args(padm)
@@ -92,7 +92,7 @@ def main():
             'deployment': deps.do_main,
             'admission': devadm.do_main,
             'device': device.do_main,
-            'image': images.do_main,
+            'artifact': artifacts.do_main,
             'inventory': inventory.do_main,
             'client':  client.do_main,
             'user':  user.do_main,
