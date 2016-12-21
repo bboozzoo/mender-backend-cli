@@ -25,7 +25,7 @@ from collections import OrderedDict
 
 import requests
 
-from mender.cli.utils import run_command, do_simple_get, api_from_opts
+from mender.cli.utils import run_command, do_simple_get, api_from_opts, errorprinter
 from mender.client import artifacts_url
 
 
@@ -92,7 +92,7 @@ def do_artifacts_artifact_add(opts):
             print("created with URL: {}".format(location))
             print('artifact ID: ', location.rsplit('/')[-1])
         else:
-            logging.warning('request failed: %s %s', rsp, rsp.json())
+            errorprinter(rsp)
 
 
 def do_artifacts_download(opts):
