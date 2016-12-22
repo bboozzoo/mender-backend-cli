@@ -61,6 +61,10 @@ def api_from_opts(opts):
     api = ApiClient()
     if opts.no_verify:
         api.verify = False
+
+        logging.info("disabling SSL warnings")
+        requests.packages.urllib3.disable_warnings()
+
     if opts.cacert:
         api.verify = opts.cacert
     if opts.user_token and os.path.exists(opts.user_token):
