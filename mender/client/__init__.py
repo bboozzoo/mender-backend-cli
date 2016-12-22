@@ -26,7 +26,7 @@ import requests.auth
 from requests import Session as ApiClient
 
 
-API_URL = '/api/integrations/0.1/'
+API_URL = '/api/management/0.1/'
 API_DEVICES_URL = '/api/devices/0.1/'
 
 def add_url_path(base, path):
