@@ -91,7 +91,7 @@ def do_artifacts_artifact_add(opts):
 
     encoder = MultipartEncoder(files)
 
-    if os.isatty(sys.stderr.fileno()):
+    if sys.stderr.isatty():
         try:
             from requests_toolbelt import MultipartEncoderMonitor
             from clint.textui.progress import Bar as ProgressBar
