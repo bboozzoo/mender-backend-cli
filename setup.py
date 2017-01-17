@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 NAME = 'mender-backend-cli'
 VERSION = '0.1'
 
-install_reqires = ['requests', 'pycrypto']
+install_reqires = ['requests', 'requests-toolbelt', 'pycrypto']
 
 setup(name=NAME,
       version=VERSION,

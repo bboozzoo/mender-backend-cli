@@ -21,9 +21,11 @@
 # SOFTWARE.
 import logging
 import io
+import os
 from collections import OrderedDict
 
 import requests
+from requests_toolbelt import MultipartEncoder
 
 from mender.cli.utils import run_command, do_simple_get, api_from_opts, errorprinter
 from mender.client import artifacts_url
@@ -82,10 +84,15 @@ def do_artifacts_artifact_add(opts):
     for k, v in image.items():
         files[k] = (None, io.StringIO(v))
     # followed by firmware data
+    # but first, try to find out the size of firmware data
+    sz = os.stat(opts.infile).st_size
     files['artifact'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
 
+    encoder = MultipartEncoder(files)
+
     with api_from_opts(opts) as api:
-        rsp = api.post(url, files=files)
+        rsp = api.post(url, data=encoder,
+                       headers={'Content-Type': encoder.content_type})
         if rsp.status_code == 201:
             # created
             location = rsp.headers.get('Location', '')

@@ -5,6 +5,7 @@ A collection of cli tools for working with Mender backend.
 Dependencies:
 - Python 3
 - requests
+- requests-toolbelt
 - pycrypto
 
 ## Tools
