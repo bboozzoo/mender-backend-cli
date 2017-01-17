@@ -109,10 +109,11 @@ def dump_device_attributes(data):
 
 def device_show(opts):
     url = inventory_url(opts.service, '/devices/{}'.format(opts.device))
-    rsp = requests.get(url, verify=opts.verify)
-    logging.debug("%r", rsp.status_code)
+    with api_from_opts(opts) as api:
+        rsp = do_simple_get(api, url)
+        logging.debug("%r", rsp.status_code)
 
-    dump_device_attributes(rsp.json())
+        dump_device_attributes(rsp.json())
 
 
 def device_group(opts):
