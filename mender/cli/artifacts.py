@@ -22,6 +22,7 @@
 import logging
 import io
 import os
+import sys
 from collections import OrderedDict
 
 import requests
@@ -89,6 +90,18 @@ def do_artifacts_artifact_add(opts):
     files['artifact'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
 
     encoder = MultipartEncoder(files)
+
+    if os.isatty(sys.stderr.fileno()):
+        try:
+            from requests_toolbelt import MultipartEncoderMonitor
+            from clint.textui.progress import Bar as ProgressBar
+
+            pb = ProgressBar(expected_size=encoder.len, filled_char='=')
+            monitor = MultipartEncoderMonitor(encoder,
+                                              lambda mon: pb.show(mon.bytes_read))
+            encoder = monitor
+        except ImportError:
+            pass
 
     with api_from_opts(opts) as api:
         rsp = api.post(url, data=encoder,

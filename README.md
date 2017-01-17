@@ -7,6 +7,7 @@ Dependencies:
 - requests
 - requests-toolbelt
 - pycrypto
+- clint (optional)
 
 ## Tools
 
