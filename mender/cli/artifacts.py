@@ -96,7 +96,7 @@ def do_artifacts_artifact_add(opts):
             from requests_toolbelt import MultipartEncoderMonitor
             from clint.textui.progress import Bar as ProgressBar
 
-            pb = ProgressBar(expected_size=encoder.len, filled_char='=')
+            pb = ProgressBar(expected_size=encoder.len, filled_char='=', every=1024*1024)
             monitor = MultipartEncoderMonitor(encoder,
                                               lambda mon: pb.show(mon.bytes_read))
             encoder = monitor
