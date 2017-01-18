@@ -20,8 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import logging
+from binascii import hexlify
 
 import requests
+
+from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA
 
 from mender.cli.utils import run_command, api_from_opts, do_request, do_simple_get
 from mender.client import admissions_url
@@ -57,6 +61,24 @@ def do_main(opts):
     run_command(opts.admcommand, commands, opts)
 
 
+def fingerprint(key):
+    k = RSA.importKey(key).exportKey('DER')
+    h = SHA.new()
+    h.update(k)
+    return h.digest()
+
+
+def slice_n(seq, n):
+    for p in range(0, len(seq), n):
+        yield seq[p:p+n]
+
+
+def dump_fingerprint(bindigest):
+    h = hexlify(bindigest).decode()
+    hexfingerprint = ':'.join(list(slice_n(h, 2)))
+    return hexfingerprint
+
+
 def dump_device(data, showkey=True):
     logging.debug('device data: %r', data)
     print('device: %s' % data['id'])
@@ -67,7 +89,9 @@ def dump_device(data, showkey=True):
         print('        %s : %s' % (key, val))
     if showkey:
         print('    public key:')
-        print(data['key'])
+        print(data['key'].strip())
+        print('    fingerprint:',
+              dump_fingerprint(fingerprint(data['key'])))
 
 
 def show_device(opts):
