@@ -32,7 +32,7 @@ def parse_arguments():
     parser.add_argument('-d', '--debug', help='Enable debugging output',
                         default=False, action='store_true')
     parser.add_argument('-s', '--service', help='Service address',
-                        default='https://docker.mender.io:8080/')
+                        default='https://docker.mender.io/')
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
     parser.add_argument('--cacert', help='Server certificate for verification',
