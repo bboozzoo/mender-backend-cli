@@ -31,7 +31,6 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 
-import requests
 
 from mender.cli.utils import run_command, api_from_opts, do_simple_get, do_request, \
     errorprinter, jsonprinter, dump_token, load_file, save_file
