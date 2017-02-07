@@ -24,7 +24,12 @@ from setuptools import setup, find_packages
 NAME = 'mender-backend-cli'
 VERSION = '0.1'
 
-install_reqires = ['requests', 'requests-toolbelt', 'pycrypto']
+install_requires = [
+    'requests',
+    'requests-toolbelt',
+    'pycrypto',
+    'clint',
+]
 
 setup(name=NAME,
       version=VERSION,
@@ -33,5 +38,5 @@ setup(name=NAME,
       author='Maciej Borzecki',
       author_email='maciek.borzecki@gmail.com',
       license='Apache-2.0',
-      install_requires=install_reqires,
+      install_requires=install_requires,
       scripts=['mender-backend'])
