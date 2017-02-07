@@ -33,7 +33,6 @@ import mender.cli.utils
 
 
 def add_args(sub):
-    pisub = sub.add_subparsers(help='Commands for client')
     sub.set_defaults(clientcommand='')
 
     sub.add_argument('-n', '--number', help="Number of clients", type=int, required=True)
@@ -43,13 +42,12 @@ def add_args(sub):
     sub.add_argument('-f', '--fail', help="Fail update with specific messsage", type=str, default="")
     sub.add_argument('-c', '--updates', help="Number of updates to perform before exiting", type=int, default=1)
 
-threads = []
-
 def do_main(opts):
+    threads = []
+
     client_options = []
-    for i in range(opts.number):
+    for _ in range(opts.number):
         new_opts = copy.deepcopy(opts)
-        new_opts.seq_no = 1
         new_opts.store = True
         new_opts.verify = False
         new_opts.attrs_set = opts.inventory
@@ -64,11 +62,12 @@ def do_main(opts):
 
 
 def run_client(opts):
+    logging.info("starting client with MAC: %s", opts.mac_address)
     block_until_authorized(opts)
     threading.Thread(target=send_inventory_data, args=(opts,)).start()
 
-    if opts.updates > 0:
-        for i in range(opts.updates):
+    if opts.updates:
+        for _ in range(opts.updates):
             block_until_update(opts)
     else:
         while True:
@@ -80,8 +79,6 @@ def block_until_authorized(opts):
 
     count = 1
     while True:
-        opts.seq_no = count
-
         if device.do_authorize(opts):
             logging.info("successfully bootstrapped client")
             return
