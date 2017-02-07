@@ -86,7 +86,7 @@ def do_artifacts_artifact_add(opts):
         files[k] = (None, io.StringIO(v))
     # followed by firmware data
     # but first, try to find out the size of firmware data
-    sz = os.stat(opts.infile).st_size
+    files['size'] = str(os.stat(opts.infile).st_size)
     files['artifact'] = (opts.infile, open(opts.infile, 'rb'), "application/octet-stream", {})
 
     encoder = MultipartEncoder(files)
