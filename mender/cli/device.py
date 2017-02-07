@@ -56,7 +56,6 @@ def add_args(sub):
     pdevattr.set_defaults(devcommand='inventory')
 
     pauthorize = pdev.add_parser('authorize', help='Authorize')
-    pauthorize.add_argument('-s', '--seq-no', default=1, help='Sequence number')
     pauthorize.add_argument('-m', '--mac-address', default='de:ad:be:ef:00:01',
                             help='MAC address')
     pauthorize.add_argument('-t', '--tenant-token', default='dummy', help='Tenant token')
@@ -128,12 +127,10 @@ def do_authorize(opts):
     identity = json.dumps({
         'mac': opts.mac_address,
     })
-    logging.info('request sequence number %s', opts.seq_no)
     logging.debug('identity: %s', identity)
     data = json.dumps({
         'id_data': identity,
         'pubkey': str(key.publickey().exportKey(), 'utf-8'),
-        'seq_no': int(opts.seq_no),
         'tenant_token': opts.tenant_token,
     })
     logging.debug('request data: %s', data)
