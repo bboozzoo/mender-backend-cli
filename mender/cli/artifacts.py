@@ -25,7 +25,6 @@ import os
 import sys
 from collections import OrderedDict
 
-import requests
 from requests_toolbelt import MultipartEncoder
 
 from mender.cli.utils import run_command, do_simple_get, api_from_opts, errorprinter
