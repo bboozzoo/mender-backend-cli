@@ -47,6 +47,12 @@ def admissions_url(host, path=''):
         return add_url_path(ap, path)
     return ap
 
+def authentication_url(host, path=''):
+    ap = add_url_path(host, service_path('/devauth/'))
+    if path:
+        return add_url_path(ap, path)
+    return ap
+
 def deployments_url(host, path=''):
     ap = add_url_path(host, service_path('/deployments/deployments'))
     if path:
