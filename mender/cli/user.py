@@ -21,12 +21,9 @@
 # SOFTWARE.
 import logging
 
-import requests
-import requests.auth
-
 from mender.cli.utils import api_from_opts, run_command, dump_token, \
     load_file, save_file
-from mender.client import user_url, JWTAuth
+from mender.client import user_url
 
 
 def add_args(sub):
