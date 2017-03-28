@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from mender.cli.utils import run_command, api_from_opts, do_simple_get
+from mender.cli.utils import run_command, api_from_opts, do_simple_get, do_simple_delete
 from mender.client import authentication_url
 
 
@@ -34,11 +34,16 @@ def add_args(sub):
     plist = pauth.add_parser('list', help='List devices')
     plist.set_defaults(authcommand='list')
 
+    pdelete = pauth.add_parser('delete', help='Delete device')
+    pdelete.add_argument('device', help='Device ID')
+    pdelete.set_defaults(authcommand='delete')
+
 
 def do_main(opts):
     commands = {
         'list': list_devices,
         'show': show_device,
+        'delete': delete_device,
     }
     run_command(opts.authcommand, commands, opts)
 
@@ -52,3 +57,8 @@ def show_device(opts):
 def list_devices(opts):
     with api_from_opts(opts) as api:
         do_simple_get(api, authentication_url(opts.service, '/devices'))
+
+def delete_device(opts):
+    url = authentication_url(opts.service, '/devices/{}'.format(opts.device))
+    with api_from_opts(opts) as api:
+        rsp = do_simple_delete(api, url)

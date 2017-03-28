@@ -108,6 +108,9 @@ def do_simple_get(api, url, printer=jsonprinter, success=200, **kwargs):
     return do_request(api, url, method='GET',
                       printer=printer, success=success, **kwargs)
 
+def do_simple_delete(api, url, printer=jsonprinter, success=204, **kwargs):
+    return do_request(api, url, method='DELETE',
+                      printer=printer, success=success, **kwargs)
 
 def do_request(api, url, method='GET', printer=jsonprinter, success=[200, 204], **kwargs):
     rsp = api.request(method, url, **kwargs)
