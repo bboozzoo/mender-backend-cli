@@ -21,8 +21,6 @@
 # SOFTWARE.
 import logging
 
-import requests
-
 from mender.cli.utils import run_command, api_from_opts, do_simple_get, \
     do_request, errorprinter
 from mender.client import inventory_url
