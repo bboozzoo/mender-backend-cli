@@ -22,14 +22,11 @@
 import logging
 import time
 import threading
-import os
 import random
 import tempfile
 import copy
-import sys
 
 from mender.cli import device
-import mender.cli.utils
 
 
 def add_args(sub):
