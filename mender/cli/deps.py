@@ -21,8 +21,6 @@
 # SOFTWARE.
 import logging
 
-import requests
-
 from mender.cli.utils import api_from_opts, run_command, do_simple_get, simpleprinter
 from mender.client import deployments_url
 
