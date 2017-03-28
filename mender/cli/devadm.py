@@ -35,28 +35,28 @@ def add_args(sub):
     padm = sub.add_subparsers(help='Commands for admissions')
     sub.set_defaults(admcommand='')
 
-    paccept = padm.add_parser('accept', help='Accept device')
+    paccept = padm.add_parser('accept', help='Accept device authentication set')
     paccept.add_argument('device', help='Device ID')
     paccept.set_defaults(admcommand='accept')
 
-    preject = padm.add_parser('reject', help='Reject device')
+    preject = padm.add_parser('reject', help='Reject device authentication set')
     preject.add_argument('device', help='Device ID')
     preject.set_defaults(admcommand='reject')
 
-    pshow = padm.add_parser('show', help='Show device')
+    pshow = padm.add_parser('show', help='Show device authentication set')
     pshow.add_argument('device', help='Device ID')
     pshow.set_defaults(admcommand='show')
 
-    plist = padm.add_parser('list', help='List devices')
+    plist = padm.add_parser('list', help='List authentication sets')
     plist.set_defaults(admcommand='list')
 
 
 def do_main(opts):
     commands = {
-        'list': list_devices,
-        'accept': lambda o: set_device_status(o, 'accepted'),
-        'reject': lambda o: set_device_status(o, 'rejected'),
-        'show': show_device,
+        'list': list_device_auths,
+        'accept': lambda o: set_device_auth_status(o, 'accepted'),
+        'reject': lambda o: set_device_auth_status(o, 'rejected'),
+        'show': show_device_auth,
     }
     run_command(opts.admcommand, commands, opts)
 
@@ -79,9 +79,10 @@ def dump_fingerprint(bindigest):
     return hexfingerprint
 
 
-def dump_device(data, showkey=True):
-    logging.debug('device data: %r', data)
-    print('device: %s' % data['id'])
+def dump_device_auth(data, showkey=True):
+    logging.debug('device auth data: %r', data)
+    print('device auth set: %s' % data['id'])
+    print('    device ID: %s' % data.get('device_id', '<none>'))
     print('    status: %s' % data['status'])
     print('    request time: %s' % data['request_time'])
     print('    attributes:')
@@ -94,24 +95,24 @@ def dump_device(data, showkey=True):
               dump_fingerprint(fingerprint(data['key'])))
 
 
-def show_device(opts):
+def show_device_auth(opts):
     url = admissions_url(opts.service, '/{}'.format(opts.device))
     with api_from_opts(opts) as api:
         rsp = do_simple_get(api, url,
-                            printer=lambda rsp: dump_device(rsp.json()))
+                            printer=lambda rsp: dump_device_auth(rsp.json()))
 
 
-def list_devices(opts):
+def list_device_auths(opts):
     with api_from_opts(opts) as api:
         do_simple_get(api, admissions_url(opts.service),
-                      printer=lambda rsp: [dump_device(dev,
-                                                       showkey=False)
+                      printer=lambda rsp: [dump_device_auth(dev,
+                                                            showkey=False)
                                            for dev in rsp.json()])
 
 
-def set_device_status(opts, status):
+def set_device_auth_status(opts, status):
     url = admissions_url(opts.service, '/{}/status'.format(opts.device))
-    logging.debug('device URL: %s', url)
+    logging.debug('device auth URL: %s', url)
     with api_from_opts(opts) as api:
         do_request(api, url, method='PUT',
                    json={
