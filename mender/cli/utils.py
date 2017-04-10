@@ -26,7 +26,7 @@ from base64 import b64decode
 
 import requests
 
-from mender.client import ApiClient, JWTAuth
+from mender.client import ApiClient, JWTAuth, ClientNotAuthorizedError
 
 
 def run_command(command, cmds, opts):
@@ -123,6 +123,8 @@ def do_request(api, url, method='GET', printer=jsonprinter, success=[200, 204], 
             else:
                 printer(rsp)
     else:
+        if rsp.status_code in [401, 403]:
+            raise ClientNotAuthorizedError(rsp)
         errorprinter(rsp)
     return rsp
 
