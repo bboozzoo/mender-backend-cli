@@ -27,6 +27,7 @@ import tempfile
 import copy
 
 from mender.cli import device
+from mender.client import ClientNotAuthorizedError
 
 
 def add_args(sub):
@@ -38,6 +39,7 @@ def add_args(sub):
     sub.add_argument('-w', '--wait', help="Maximum wait before changing update steps", type=int, default=30)
     sub.add_argument('-f', '--fail', help="Fail update with specific messsage", type=str, default="")
     sub.add_argument('-c', '--updates', help="Number of updates to perform before exiting", type=int, default=1)
+
 
 def do_main(opts):
     threads = []
@@ -58,38 +60,67 @@ def do_main(opts):
         t.start()
 
 
+class InventoryReporter:
+    def __init__(self, opts):
+        self.thread = threading.Thread(target=self.send_inventory_data)
+        self.stop_event = threading.Event()
+        self.opts = opts
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.thread.join()
+
+    def send_inventory_data(self):
+        while not self.stop_event.wait(self.opts.inventory_update_freq):
+            logging.info('inventory report')
+            device.do_inventory(self.opts)
+
+
 def run_client(opts):
     logging.info("starting client with MAC: %s", opts.mac_address)
-    block_until_authorized(opts)
-    threading.Thread(target=send_inventory_data, args=(opts,)).start()
 
-    if opts.updates:
-        for _ in range(opts.updates):
-            block_until_update(opts)
-    else:
+    need_auth = True
+    update_cnt = 0
+
+    while True:
+        if need_auth:
+            block_until_authorized(opts)
+
+        need_auth = False
+
+        inv = InventoryReporter(opts)
+        inv.start()
+
         while True:
-            block_until_update(opts)
+            try:
+                block_until_update(opts)
+                update_cnt += 1
+                if opts.updates and update_cnt >= opts.updates:
+                    break
+            except ClientNotAuthorizedError:
+                logging.info('client authorization expired')
+                need_auth = True
+                break
+
+        logging.info('waiting for inventory reporter')
+        inv.stop()
+
 
 def block_until_authorized(opts):
     logging.info("performing bootstrap")
     device.do_key(opts)
 
-    count = 1
     while True:
         if device.do_authorize(opts):
             logging.info("successfully bootstrapped client")
             return
         else:
             logging.info("device not authorized yet..")
-            count += 1
             time.sleep(5)
 
 
-def send_inventory_data(opts):
-    while True:
-        device.do_inventory(opts)
-        time.sleep(opts.inventory_update_freq)
-
-
 def block_until_update(opts):
-    device.do_fake_update(opts)
+    return device.do_fake_update(opts)
