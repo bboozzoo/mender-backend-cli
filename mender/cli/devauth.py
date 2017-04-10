@@ -55,8 +55,8 @@ def dump_device_brief(data):
     print('device ID: %s' % data['id'])
     print('    created:  %s' % data['created_ts'])
     print('    auth sets: %s' % ', '.join(['{} ({})'.format(aset['id'], aset['status'])
-                                          for aset in
-                                          data.get('auth_sets', [])]))
+                                           for aset in
+                                           data.get('auth_sets', [])]))
 
 def dump_device(data):
     logging.debug('device auth data: %r', data)
