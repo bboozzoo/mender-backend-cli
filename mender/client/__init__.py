@@ -90,6 +90,10 @@ class ClientError(requests.exceptions.RequestException):
     pass
 
 
+class ClientNotAuthorizedError(ClientError):
+    """Client not authorized"""
+    pass
+
 class JWTAuth(requests.auth.AuthBase):
     """Perform device authentication using device token"""
     def __init__(self, token):
