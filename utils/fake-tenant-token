@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import json
+import argparse
+
+from base64 import urlsafe_b64encode
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='fake-tenant-token',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-t', '--tenant', default='foobar', help='Tenant name, pass \'\' to not include tenant claim')
+    parser.add_argument('-s', '--subject', default='someid', help='Subject')
+
+    return parser.parse_args()
+
+def make_fake_tenant_token(tenant='foobar', subject='someid', override={}):
+    """make_fake_tenant_token will generate a JWT-like tenant token which looks
+    like this: 'fake.<base64 JSON encoded claims>.fake-sig'. The claims are:
+    issuer (Mender), subject (someid), mender.tenant (foobar). Pass `override`
+    to override or add more claims or set tenant/subject to override only
+    tenant and subject claims.
+
+    """
+    claims = {
+        'iss': 'Mender',
+        'sub': subject,
+    }
+    if tenant:
+        claims['mender.tenant'] = tenant
+
+    claims.update(override)
+
+    # serialize claims to JSON, encode as base64 and strip padding to be
+    # compatible with JWT
+    enc = urlsafe_b64encode(json.dumps(claims).encode()). \
+          decode().strip('==')
+
+    return 'fake.' + enc + '.fake-sig'
+
+if __name__ == '__main__':
+    opts = parse_arguments()
+    tok = make_fake_tenant_token(opts.tenant, opts.subject)
+    print(tok)
