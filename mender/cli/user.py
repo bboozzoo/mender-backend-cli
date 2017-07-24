@@ -22,7 +22,7 @@
 import logging
 
 from mender.cli.utils import api_from_opts, run_command, dump_token, \
-    load_file, save_file
+    load_file, save_file, do_simple_get
 from mender.client import user_url
 
 
@@ -48,6 +48,9 @@ def add_args(sub):
     pinit.add_argument('-u', '--user', help='User name', required=True)
     pinit.add_argument('-p', '--password', help='Password', required=True)
 
+    plist = pusub.add_parser('list', help='List users')
+    plist.set_defaults(usercommand='list')
+
 
 def do_main(opts):
     logging.debug('user opts: %r', opts)
@@ -56,6 +59,7 @@ def do_main(opts):
         'token': do_user_token,
         'initial-login': do_user_login_initial,
         'initial': do_user_create_initial,
+        'list': list_users,
     }
     run_command(opts.usercommand, cmds, opts)
 
@@ -121,3 +125,16 @@ def do_user_token(opts):
                       opts.user_token, err)
         return
     dump_token(tok)
+
+def dump_user(data):
+    print('user ID: %s' % data['id'])
+    print('    email:  %s' % data['email'])
+    print('    created:  %s' % data['created_ts'])
+    print('    updated:  %s' % data['updated_ts'])
+
+def list_users(opts):
+    logging.info('list users')
+    with api_from_opts(opts) as api:
+        do_simple_get(api, user_url(opts.service, '/users'),
+                      printer=lambda rsp: [dump_user(user)
+                                           for user in rsp.json()])
