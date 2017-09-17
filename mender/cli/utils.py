@@ -75,11 +75,11 @@ def api_from_opts(opts):
 
 def jsonprinter(rsp):
     """Printer for JSON type responses"""
-    from pprint import pprint
+    import json
     if not isinstance(rsp, requests.Response):
         raise TypeError("expected requests.Response")
     try:
-        pprint(rsp.json())
+        print(json.dumps(rsp.json(), indent=4))
     except ValueError:
         logging.error("Failed to pprint response, content was not JSON")
         logging.error("response text: %s", rsp.text)
