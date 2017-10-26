@@ -36,6 +36,10 @@ def add_args(sub):
     plist = pauth.add_parser('list', help='List devices')
     plist.set_defaults(authcommand='list')
 
+    pcount = pauth.add_parser('count', help='Count devices with given status')
+    pcount.add_argument('status', help='device status (pending|accepted|rejected)')
+    pcount.set_defaults(authcommand='count')
+
     pdelete = pauth.add_parser('delete', help='Delete device')
     pdelete.add_argument('device', help='Device ID')
     pdelete.set_defaults(authcommand='delete')
@@ -44,6 +48,7 @@ def add_args(sub):
 def do_main(opts):
     commands = {
         'list': list_devices,
+        'count': count_devices,
         'show': show_device,
         'delete': delete_device,
     }
@@ -90,3 +95,8 @@ def delete_device(opts):
     url = authentication_url(opts.service, '/devices/{}'.format(opts.device))
     with api_from_opts(opts) as api:
         rsp = do_simple_delete(api, url)
+
+def count_devices(opts):
+    url = authentication_url(opts.service, '/devices/count?{}'.format(opts.status))
+    with api_from_opts(opts) as api:
+        rsp = do_simple_get(api, url)
