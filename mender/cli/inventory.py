@@ -22,7 +22,7 @@
 import logging
 
 from mender.cli.utils import run_command, api_from_opts, do_simple_get, \
-    do_request, errorprinter
+    do_request, errorprinter, jsonprinter
 from mender.client import inventory_url
 
 
@@ -47,6 +47,9 @@ def add_args(sub):
     pdevgroup.set_defaults(invdevcommand='group')
 
     pdevlist = pdevsub.add_parser('list', help='List devices')
+    pdevlist.add_argument('-a', '--attributes', default="id, updated", help='Csv attribute list to show')
+    pdevlist.add_argument('-f', '--format', default="plain", help='Format Output')
+    pdevlist.add_argument('-l', '--limit', default="500", help='Limit output')
     pdevlist.set_defaults(invdevcommand='list')
 
     pgr = pinvsub.add_parser('group', help='Group commands')
@@ -107,12 +110,12 @@ def dump_device_attributes(data):
 
 def device_show(opts):
     url = inventory_url(opts.service, '/devices/{}'.format(opts.device))
+
     with api_from_opts(opts) as api:
         rsp = do_simple_get(api, url)
         logging.debug("%r", rsp.status_code)
 
         dump_device_attributes(rsp.json())
-
 
 def device_group(opts):
     url = inventory_url(opts.service, '/devices/{}/group'.format(opts.device))
@@ -140,14 +143,28 @@ def device_group(opts):
 def devices_list(opts):
     def devlist_printer(rsp):
         devslist = rsp.json()
-        print('devices:')
-        for dev in devslist:
-            attrs = repack_attrs(dev.get('attributes'))
-            print('  {} (type: {}, updated: {})'.format(dev['id'],
-                                                        attrs.get('device_type', '<undefined>'),
-                                                        dev['updated_ts']))
+        logging.info("Devices:")
+        if opts.format == 'plain':
+            for dev in devslist:
+                attrs = repack_attrs(dev.get('attributes'))
+                result = ""
+                if opts.attributes:
+                    attributes = opts.attributes.split(",")
+                    for attribute in attributes:
+                        attribute = attribute.strip()
+                        if attribute == 'id':
+                            result = result + "{}={} ".format(attribute, dev['id'])
+                        elif attribute == 'updated':
+                            result = result + "{}={} ".format(attribute, dev['updated_ts'])
+                        else:
+                            result = result + "{}={} ".format(attribute, attrs.get(attribute, '<undefined>'))
+                print(result)
 
-    url = inventory_url(opts.service, '/devices')
+        elif opts.format == 'json':
+            jsonprinter(rsp)
+
+    # TODO add pagination (go through all pages)
+    url = inventory_url(opts.service, '/devices?per_page={}'.format(opts.limit))
     with api_from_opts(opts) as api:
         do_simple_get(api, url, printer=devlist_printer)
 
