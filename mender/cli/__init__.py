@@ -21,6 +21,7 @@
 # SOFTWARE.
 import logging
 import argparse
+import os
 
 from mender.cli import deps, devadm, devauth, device, artifacts, inventory, client, user
 from mender.cli.utils import run_command, CommandNotSupportedError
@@ -31,8 +32,10 @@ def parse_arguments():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-d', '--debug', help='Enable debugging output',
                         default=False, action='store_true')
+    parser.add_argument('-q', '--quiet', help='Disable any output',
+                        default=False, action='store_true')
     parser.add_argument('-s', '--service', help='Service address',
-                        default='https://docker.mender.io/')
+                        default=os.environ.get('MENDER_URL', 'https://docker.mender.io/'))
     parser.add_argument('-n', '--no-verify', help='Skip certificate verification',
                         default=False, action='store_true')
     parser.add_argument('--cacert', help='Server certificate for verification',
@@ -83,6 +86,9 @@ def main():
     level = logging.INFO
     if opts.debug:
         level = logging.DEBUG
+
+    if opts.quiet:
+        level = logging.ERROR
 
     logging.basicConfig(level=level)
 
